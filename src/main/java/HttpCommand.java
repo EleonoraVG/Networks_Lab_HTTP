@@ -2,12 +2,7 @@ public enum HttpCommand {
 
   HEAD, GET, PUT, POST;
 
-  @Override
-  public String toString() {
-    return super.toString();
-  }
-
-  public static HttpCommand stringToCommand(String string) {
+  public static HttpCommand fromString(String string) {
     HttpCommand command;
     switch (string) {
       case "HEAD":
@@ -26,5 +21,10 @@ public enum HttpCommand {
         throw new IllegalArgumentException("Invalid HTTP command: " + string);
     }
     return command;
+  }
+
+  @Override
+  public String toString() {
+    return super.toString();
   }
 }
