@@ -1,7 +1,10 @@
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -150,27 +153,20 @@ public class ChatClient {
     //Build the response header of the server response.
     ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
 
-    // Read the contents
-    // TODO: Set the charSet in the input reader constructer and maybetransition back to Strings?
     while (true) {
 
-      List<byte[]> bytes = new ArrayList<>();
       if (responseHeader.getTransferEncoding() != null && responseHeader.getTransferEncoding().equals("chunked")) {
-        byte[] response = processChunkedEncoding(inFromServer);
-        while (response.length != 0) {
-          bytes.add(response);
+        String response = processChunkedEncoding(inFromServer);
+        contentBuilder.append(response);
+        if (response.length() == 0) {
+          break;
         }
-        for (byte[] elem:bytes){
-
-        }
-        break;
       } else if (responseHeader.getContentLength() != null) {
-        bytes.add(processWithContentLength(inFromServer, responseHeader.getContentLength()));
+        contentBuilder.append(processWithContentLength(inFromServer, responseHeader.getContentLength()));
         break;
       } else {
         // Use in case of HTTP/1.0
         lastLine = "";
-        contentBuilder = new StringBuilder();
         while (lastLine != null && !lastLine.equals(CR + LF)) {
           lastLine = inFromServer.readLine(); // Read from the server
           contentBuilder.append(lastLine);
@@ -179,11 +175,10 @@ public class ChatClient {
     }
 
     String contentString = contentBuilder.toString();
-    if (contentString.length() == 0){
+    if (contentString.length() == 0) {
       contentString = new String();
     }
-    if (responseHeader.getCharSet() != null)
-    {
+    if (responseHeader.getCharSet() != null) {
       Charset usedCharSet = findCharSet(responseHeader.getCharSet());
       contentString = new String(contentString.getBytes(), usedCharSet);
     }
@@ -217,9 +212,10 @@ public class ChatClient {
    * @return
    * @throws IOException
    */
-  private byte[] processChunkedEncoding(BufferedReader inFromServer) throws IOException {
-    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-    String[] lengthLineArray = inFromServer.readLine().split(";");
+  private String processChunkedEncoding(BufferedReader inFromServer) throws IOException {
+    StringBuilder stringBuilder = new StringBuilder();
+    String line = inFromServer.readLine();
+    String[] lengthLineArray = line.split(";");
     if (lengthLineArray.length < 1) {
       //TODO: Change exception thrown
       throw new IllegalStateException();
@@ -229,16 +225,16 @@ public class ChatClient {
       int messageLength = Integer.parseInt(lengthLineArray[0], 16);
       System.out.println(messageLength);
       for (int i = 0; i < messageLength; i++) {
-        buffer.write(inFromServer.read());
+        stringBuilder.append((char)inFromServer.read());
       }
       // Process the footers and 0 line
       String lastline = "";
-      while (!Objects.equals(lastline, CR + LF) && lastline != null && !Objects.equals(lastline, "0")) {
+      while (!Objects.equals(lastline, CR + LF) && !Objects.equals(lastline, "0")) {
         lastline = inFromServer.readLine();
       }
     }
 
-    return buffer.toByteArray();
+    return stringBuilder.toString();
   }
 
   /**
@@ -249,12 +245,12 @@ public class ChatClient {
    * @return
    * @throws IOException
    */
-  private byte[] processWithContentLength(BufferedReader inFromServer, int contentLength) throws IOException {
-    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+  private String processWithContentLength(BufferedReader inFromServer, int contentLength) throws IOException {
+    StringBuilder result = new StringBuilder();
     for (int i = 0; i < contentLength; i++) {
-      buffer.write(inFromServer.read());
+      result.append((char)inFromServer.read());
     }
-    return buffer.toByteArray();
+    return result.toString();
   }
 
   /**
