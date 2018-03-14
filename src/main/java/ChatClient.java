@@ -19,7 +19,7 @@ public class ChatClient {
   private static final String CR = "\r";
   private static final String LF = "\n";
   private static final String SPACE = " ";
-  private static final String responseFileName = "response.out"; //TODO change to html file
+  private static final String responseFileName = "response.html"; //TODO change to html file
 
   private HttpVersion httpVersion;
   private String responseDirPath;
