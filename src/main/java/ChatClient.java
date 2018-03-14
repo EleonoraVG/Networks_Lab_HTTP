@@ -6,17 +6,15 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 //TODO: Write only the HTML (content of the response to a file)
 
 public class ChatClient {
 
-  private static final String CR = "\r";
-  private static final String LF = "\n";
+  private static final Character CR = '\r';
+  private static final Character LF = '\n';
   private static final String SPACE = " ";
   private static final String responseFileName = "response.html";
 
@@ -129,7 +127,7 @@ public class ChatClient {
 
     Preconditions.checkNotNull(clientSocket);
     DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
-    BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+    BufferedInputStream inFromServer = new BufferedInputStream(clientSocket.getInputStream());
     String sentence = createCommandString(command, path);
     StringBuilder contentBuilder = new StringBuilder();
     // Send request to the server
@@ -138,74 +136,74 @@ public class ChatClient {
 
     //Process the header
     List<String> headerStrings = new ArrayList<>();
-    String lastLine = "";
-    while (true) {
-      lastLine = inFromServer.readLine();
-      if (lastLine == null || Objects.equals(lastLine, "") || Objects.equals(lastLine, CR + LF)) {
-        break;
+    boolean headerDone = false;
+    while (headerDone == false) {
+      String line = readOneLine(inFromServer);
+      if (line.equals(CR + LF)) {
+        headerDone = true;
+      } else if (line.equals(LF)) {
+        headerDone = true;
+      } else if (line.equals("")) {
+        headerDone = true;
       }
-      headerStrings.add(lastLine);
+      headerStrings.add(line);
     }
 
     //Build the response header of the server response.
     ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
-    List<byte[]> bytes = new ArrayList<>();
     // Read the contents
     // TODO: Set the charSet in the input reader constructer and maybetransition back to Strings?
-    while (true) {
+    while (true)
+
+    {
 
       if (responseHeader.getTransferEncoding() != null && responseHeader.getTransferEncoding().equals("chunked")) {
-        byte[] response = processChunkedEncoding(inFromServer);
-        bytes.add(response);
-        if (response.equals("")) {
+        byte[] response = processChunkedEncoding(inFromServer, responseHeader.getCharSet());
+        String responseString;
+        if (responseHeader.getCharSet() != null) {
+          responseString = new String(response, responseHeader.getCharSet());
+        } else {
+          responseString = new String(response);
+        }
+        contentBuilder.append(responseString);
+        if (responseString.equals("")) {
           break;
         }
-        break;
       } else if (responseHeader.getContentLength() != null) {
-        bytes.add(processWithContentLength(inFromServer, responseHeader.getContentLength()));
+        contentBuilder.append(new String(processWithContentLength(inFromServer, responseHeader.getContentLength()), responseHeader.getCharSet()));
         break;
       } else {
-        // Use in case of HTTP/1.0
-        lastLine = "";
-        contentBuilder = new StringBuilder();
-        while (lastLine != null && !lastLine.equals(CR + LF)) {
-          lastLine = inFromServer.readLine(); // Read from the server
-          contentBuilder.append(lastLine);
-        }
+        //TODO: fix
+        break;
+//        // Use in case of HTTP/1.0
+//        lastLine = "";
+//        contentBuilder = new StringBuilder();
+//        while (lastLine != null && !lastLine.equals(CR + LF)) {
+//          lastLine = inFromServer.readLine(); // Read from the server
+//          contentBuilder.append(lastLine);
+//        }
       }
     }
 
-    for (byte[] elem : bytes) {
-      if (responseHeader.getCharSet() != null) {
-        Charset usedCharSet = findCharSet(responseHeader.getCharSet());
-        contentBuilder.append(new String(elem, usedCharSet));
-      } else {
-        contentBuilder.append(new String(elem));
-      }
-
-    }
     String contentString = contentBuilder.toString();
-    return new
-            ServerResponse(responseHeader, contentString);
+    return new ServerResponse(responseHeader, contentString);
   }
 
-  private Charset findCharSet(String string) {
-    switch (string.trim().toUpperCase()) {
-      case "ISO-8859-1":
-        return StandardCharsets.ISO_8859_1;
-      case "UTF-8":
-        return StandardCharsets.UTF_8;
-      case "UTF-16":
-        return StandardCharsets.UTF_16;
-      case "UTF-16BE":
-        return StandardCharsets.UTF_16BE;
-      case "UTF-16LE":
-        return StandardCharsets.UTF_16LE;
-      case "US-ASCII":
-        return StandardCharsets.US_ASCII;
-      default:
-        return null;
+  private String readOneLine(BufferedInputStream inFromServer) throws IOException {
+    StringBuilder line = new StringBuilder();
+    int i;
+    while ((i = inFromServer.read()) != -1) {
+      line.append(i);
+      if (i == CR) {
+        int nextChar = inFromServer.read();
+        if (nextChar == LF) {
+          break;
+        }
+      } else if (i == LF) {
+        break;
+      }
     }
+    return line.toString();
   }
 
   /**
@@ -215,23 +213,30 @@ public class ChatClient {
    * @return
    * @throws IOException
    */
-  private byte[] processChunkedEncoding(BufferedReader inFromServer) throws IOException {
-    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-    String[] lengthLineArray = inFromServer.readLine().split(";");
-    if (lengthLineArray.length < 1) {
-      //TODO: Change exception thrown
-      throw new IllegalStateException();
+  private byte[] processChunkedEncoding(BufferedInputStream inFromServer, Charset charset) throws IOException {
+
+    //Read the first line
+    StringBuilder firstline = new StringBuilder();
+    int elem;
+    while ((elem = inFromServer.read()) != ';') {
+      char c = (char) elem;
+      System.out.println(c);
+      firstline.append(c);
     }
-    //TODO: BEAUTIFY
-    if (!lengthLineArray[0].equals("")) {
-      int messageLength = Integer.parseInt(lengthLineArray[0], 16);
-      System.out.println(messageLength);
-      for (int i = 0; i < messageLength; i++) {
-        buffer.write(inFromServer.read());
-      }
+
+    int messageLength = Integer.parseInt(firstline.toString().split(";")[0].trim(), 16);
+
+    System.out.println(messageLength);
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream(messageLength);
+    for (int i = 0; i < messageLength; i++) {
+      buffer.write(inFromServer.read());
     }
-    System.out.println(buffer.toByteArray().length);
-    return buffer.toByteArray();
+
+    buffer.flush();
+    buffer.close();
+    byte[] byteArray = buffer.toByteArray();
+    System.out.println(byteArray.length);
+    return byteArray;
   }
 
   /**
@@ -242,7 +247,7 @@ public class ChatClient {
    * @return
    * @throws IOException
    */
-  private byte[] processWithContentLength(BufferedReader inFromServer, int contentLength) throws IOException {
+  private byte[] processWithContentLength(BufferedInputStream inFromServer, int contentLength) throws IOException {
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     for (int i = 0; i < contentLength; i++) {
       buffer.write(inFromServer.read());

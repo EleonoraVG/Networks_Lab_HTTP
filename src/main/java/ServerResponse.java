@@ -1,3 +1,5 @@
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -26,7 +28,7 @@ public class ServerResponse {
     //TODO: expand to all standard headers.
     private String connectionField = null;
     private String contentEncoding = null;
-    private String charSet = null;
+    private Charset charSet = null;
     private Integer contentLength = null;
     private String contentType = null;
     private String transferEncoding = null;
@@ -55,7 +57,7 @@ public class ServerResponse {
           contentType = contentTypeSplit[0].trim();
           if (contentTypeSplit.length >= 2) {
             if (Pattern.matches("charset.*", contentTypeSplit[1].trim())) {
-              charSet = contentTypeSplit[1].trim().split("=")[1];
+              charSet = findCharSet(contentTypeSplit[1].trim().split("=")[1]);
             }
           }
         } else if (Pattern.matches("Connection: .*", line)) {
@@ -89,8 +91,27 @@ public class ServerResponse {
       return headerText;
     }
 
-    public String getCharSet() {
+    public Charset getCharSet() {
       return charSet;
+    }
+
+    private Charset findCharSet(String string) {
+      switch (string.trim().toUpperCase()) {
+        case "ISO-8859-1":
+          return StandardCharsets.ISO_8859_1;
+        case "UTF-8":
+          return StandardCharsets.UTF_8;
+        case "UTF-16":
+          return StandardCharsets.UTF_16;
+        case "UTF-16BE":
+          return StandardCharsets.UTF_16BE;
+        case "UTF-16LE":
+          return StandardCharsets.UTF_16LE;
+        case "US-ASCII":
+          return StandardCharsets.US_ASCII;
+        default:
+          return StandardCharsets.UTF_8;
+      }
     }
   }
 }
