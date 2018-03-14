@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 //TODO: Write only the HTML (content of the response to a file)
@@ -15,6 +16,8 @@ public class ChatClient {
 
   private static final Character CR = '\r';
   private static final Character LF = '\n';
+  private static final  int CRINT = 13;
+  private static final  int LFINT = 10;
   private static final String SPACE = " ";
   private static final String responseFileName = "response.html";
 
@@ -134,27 +137,27 @@ public class ChatClient {
     outToServer.writeBytes(sentence);
     outToServer.flush();
 
-    //Process the header
+    // Process the header
+    byte[] endHeaderBytes = new byte[]{CRINT,LFINT};
+    byte[] altEndHeaderBytes = new byte[]{LFINT};
     List<String> headerStrings = new ArrayList<>();
     boolean headerDone = false;
     while (headerDone == false) {
-      String line = readOneLine(inFromServer);
-      if (line.equals(CR + LF)) {
+      byte[] line = readOneLine(inFromServer);
+      if (Arrays.equals(line,endHeaderBytes)) {
         headerDone = true;
-      } else if (line.equals(LF)) {
+      } else if (Arrays.equals(line,altEndHeaderBytes)) {
         headerDone = true;
-      } else if (line.equals("")) {
+      } else if (Arrays.equals(line,new byte[]{})) {
         headerDone = true;
       }
-      headerStrings.add(line);
+      headerStrings.add(new String(line,Charset.defaultCharset()));
     }
 
     //Build the response header of the server response.
     ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
     // Read the contents
-    // TODO: Set the charSet in the input reader constructer and maybetransition back to Strings?
     while (true)
-
     {
 
       if (responseHeader.getTransferEncoding() != null && responseHeader.getTransferEncoding().equals("chunked")) {
@@ -189,13 +192,14 @@ public class ChatClient {
     return new ServerResponse(responseHeader, contentString);
   }
 
-  private String readOneLine(BufferedInputStream inFromServer) throws IOException {
-    StringBuilder line = new StringBuilder();
+  private byte[] readOneLine(BufferedInputStream inFromServer) throws IOException {
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
     int i;
     while ((i = inFromServer.read()) != -1) {
-      line.append(i);
+      byteArrayOutputStream.write(i);
       if (i == CR) {
         int nextChar = inFromServer.read();
+        byteArrayOutputStream.write(nextChar);
         if (nextChar == LF) {
           break;
         }
@@ -203,7 +207,9 @@ public class ChatClient {
         break;
       }
     }
-    return line.toString();
+    byteArrayOutputStream.flush();
+    byteArrayOutputStream.close();
+    return byteArrayOutputStream.toByteArray();
   }
 
   /**
