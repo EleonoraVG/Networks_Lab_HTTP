@@ -158,7 +158,7 @@ public class ChatClient {
       if (responseHeader.getTransferEncoding() != null && responseHeader.getTransferEncoding().equals("chunked")) {
         String response = processChunkedEncoding(inFromServer);
         contentBuilder.append(response);
-        if (response.length() == 0) {
+        if (response.equals("")) {
           break;
         }
       } else if (responseHeader.getContentLength() != null) {
@@ -175,12 +175,9 @@ public class ChatClient {
     }
 
     String contentString = contentBuilder.toString();
-    if (contentString.length() == 0) {
-      contentString = new String();
-    }
     if (responseHeader.getCharSet() != null) {
       Charset usedCharSet = findCharSet(responseHeader.getCharSet());
-      contentString = new String(contentString.getBytes(), usedCharSet);
+      contentString = new String(contentString.getBytes("UTF-16"), usedCharSet);
     }
     return new
             ServerResponse(responseHeader, contentString);
@@ -213,28 +210,30 @@ public class ChatClient {
    * @throws IOException
    */
   private String processChunkedEncoding(BufferedReader inFromServer) throws IOException {
-    StringBuilder stringBuilder = new StringBuilder();
-    String line = inFromServer.readLine();
-    String[] lengthLineArray = line.split(";");
+    StringBuilder result = new StringBuilder();
+    String lengthLine = inFromServer.readLine();
+    // Get the part until the ;
+    String[] lengthLineArray = lengthLine.split(";");
     if (lengthLineArray.length < 1) {
       //TODO: Change exception thrown
       throw new IllegalStateException();
     }
-    //TODO: BEAUTIFY
-    if (!lengthLineArray[0].equals("")) {
-      int messageLength = Integer.parseInt(lengthLineArray[0], 16);
-      System.out.println(messageLength);
-      for (int i = 0; i < messageLength; i++) {
-        stringBuilder.append((char)inFromServer.read());
-      }
-      // Process the footers and 0 line
-      String lastline = "";
-      while (!Objects.equals(lastline, CR + LF) && !Objects.equals(lastline, "0")) {
-        lastline = inFromServer.readLine();
-      }
+    if (lengthLineArray[0].equals("")) {
+      return "";
+    }
+    int messageLength = Integer.parseInt(lengthLineArray[0], 16);
+
+    for (int i = 0; i < messageLength; i++) {
+      result.append((char) inFromServer.read());
+    }
+    // Process the headers and 0 line
+    String lastline = "";
+    while (!Objects.equals(lastline, CR + LF) && lastline != null && !Objects.equals(lastline, "0")) {
+      lastline = inFromServer.readLine();
+      result.append(lastline);
     }
 
-    return stringBuilder.toString();
+    return result.toString();
   }
 
   /**
@@ -248,7 +247,7 @@ public class ChatClient {
   private String processWithContentLength(BufferedReader inFromServer, int contentLength) throws IOException {
     StringBuilder result = new StringBuilder();
     for (int i = 0; i < contentLength; i++) {
-      result.append((char)inFromServer.read());
+      result.append((char) inFromServer.read());
     }
     return result.toString();
   }
