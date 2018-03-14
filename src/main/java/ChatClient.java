@@ -17,8 +17,8 @@ public class ChatClient {
 
   private static final Character CR = '\r';
   private static final Character LF = '\n';
-  private static final  int CRINT = 13;
-  private static final  int LFINT = 10;
+  private static final int CRINT = 13;
+  private static final int LFINT = 10;
   private static final String SPACE = " ";
   private static final String responseFileName = "response.html";
 
@@ -139,17 +139,17 @@ public class ChatClient {
     outToServer.flush();
 
     // Process the header
-    byte[] endHeaderBytes = new byte[]{CRINT,LFINT};
+    byte[] endHeaderBytes = new byte[]{CRINT, LFINT};
     byte[] altEndHeaderBytes = new byte[]{LFINT};
     List<String> headerStrings = new ArrayList<>();
     boolean headerDone = false;
     while (headerDone == false) {
       byte[] line = readOneLine(inFromServer);
-      if (Arrays.equals(line,endHeaderBytes)) {
+      if (Arrays.equals(line, endHeaderBytes)) {
         headerDone = true;
-      } else if (Arrays.equals(line,altEndHeaderBytes)) {
+      } else if (Arrays.equals(line, altEndHeaderBytes)) {
         headerDone = true;
-      } else if (Arrays.equals(line,new byte[]{})) {
+      } else if (Arrays.equals(line, new byte[]{})) {
         headerDone = true;
       }
       headerStrings.add(new String(line, StandardCharsets.UTF_8));
@@ -158,8 +158,7 @@ public class ChatClient {
     //Build the response header of the server response.
     ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
     // Read the contents
-    while (true)
-    {
+    while (true) {
 
       if (responseHeader.getTransferEncoding() != null && responseHeader.getTransferEncoding().equals("chunked")) {
         byte[] response = processChunkedEncoding(inFromServer, responseHeader.getCharSet());
@@ -223,15 +222,13 @@ public class ChatClient {
   private byte[] processChunkedEncoding(BufferedInputStream inFromServer, Charset charset) throws IOException {
 
     //Read the first line
-    StringBuilder firstline = new StringBuilder();
-    int elem;
-    while ((elem = inFromServer.read()) != ';') {
-      char c = (char) elem;
-      System.out.println(c);
-      firstline.append(c);
+    byte[] firstLineBytes = readOneLine(inFromServer);
+    String firstLine = new String(firstLineBytes,charset);
+    String lengthString = firstLine.split(";")[0].trim();
+    if (firstLine.equals("\r\n") || firstLine.equals("\n")){
+      return new byte[]{};
     }
-
-    int messageLength = Integer.parseInt(firstline.toString().split(";")[0].trim(), 16);
+    int messageLength = Integer.parseInt(lengthString, 16);
 
     System.out.println(messageLength);
     ByteArrayOutputStream buffer = new ByteArrayOutputStream(messageLength);
