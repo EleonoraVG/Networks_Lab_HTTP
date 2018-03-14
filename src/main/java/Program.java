@@ -28,9 +28,16 @@ public class Program {
     //Build and run chatClient
     ChatClient chatClient;
     if (useHttp10) {
-      chatClient = ChatClient.newBuilder().setIpAddress(url).setPort(port).setHttpVersion(HttpVersion.HTTP_1_0).build();
+      chatClient = ChatClient.newBuilder()
+              .setIpAddress(url)
+              .setPort(port)
+              .setHttpVersion(HttpVersion.HTTP_1_0)
+              .build();
     } else {
-      chatClient = ChatClient.newBuilder().setIpAddress(url).setPort(port).build();
+      chatClient = ChatClient.newBuilder()
+              .setIpAddress(url)
+              .setPort(port)
+              .build();
     }
     chatClient.runAndSaveResult(httpCommand);
   }

@@ -1,16 +1,15 @@
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.regex.Pattern;
 
 //TODO: Write only the HTML (content of the response to a file)
 
@@ -19,7 +18,7 @@ public class ChatClient {
   private static final String CR = "\r";
   private static final String LF = "\n";
   private static final String SPACE = " ";
-  private static final String responseFileName = "response.out"; //TODO change to html file
+  private static final String responseFileName = "response.html";
 
   private HttpVersion httpVersion;
   private String responseDirPath;
@@ -71,18 +70,18 @@ public class ChatClient {
    */
   private void runAndSaveResultHTTP_1_0(HttpCommand command) throws IOException {
     startConnection();
-    String resultInitialCommand = executeCommand(command, ipAddress.getHostName() + "/");
+    ServerResponse resultInitialCommand = executeCommand(command, ipAddress.getHostName() + "/");
     closeConnection();
 
     // Write the initial response to file.
-    FileProcessor.writeToFile(resultInitialCommand, responseDirPath, responseFileName);
+    FileProcessor.writeToFile(resultInitialCommand.getContentText(), responseDirPath, responseFileName);
     System.out.println(resultInitialCommand);
 
     if (command.equals(HttpCommand.GET)) {
-      List<String> objectLocations = HtmlProcessor.retrieveEmbeddedObjectLocations(resultInitialCommand);
+      List<String> objectLocations = HtmlProcessor.retrieveEmbeddedObjectLocations(resultInitialCommand.getContentText());
       for (int i = 0; i < objectLocations.size(); i++) {
         startConnection();
-        FileProcessor.writeToFile(executeCommand(HttpCommand.GET, objectLocations.get(i)), embeddedObjectsDirPath, "obj" + i);
+        FileProcessor.writeToFile(executeCommand(HttpCommand.GET, objectLocations.get(i)).getContentText(), embeddedObjectsDirPath, "obj" + i);
         closeConnection();
       }
     }
@@ -99,15 +98,16 @@ public class ChatClient {
    */
   private void runAndSaveResultHTTP_1_1(HttpCommand command) throws IOException {
     startConnection();
-    String resultInitialCommand = executeCommand(command, ipAddress.getHostName() + "/");
-    System.out.println(resultInitialCommand);
+    ServerResponse resultInitialCommand = executeCommand(command, ipAddress.getHostName() + "/");
+    System.out.println(resultInitialCommand.getContentText());
     // Write the response to file
-    FileProcessor.writeToFile(resultInitialCommand, responseDirPath, responseFileName);
+    FileProcessor.writeToFile(resultInitialCommand.getContentText(), responseDirPath, responseFileName);
     if (command.equals(HttpCommand.GET)) {
-      List<String> objectLocations = HtmlProcessor.retrieveEmbeddedObjectLocations(resultInitialCommand);
+      List<String> objectLocations = HtmlProcessor.retrieveEmbeddedObjectLocations(resultInitialCommand.getContentText());
       for (int i = 0; i < objectLocations.size(); i++) {
         // TODO: Give the byte representation not the string representation! Or get change the representation in execute command to bytes.
-        FileProcessor.writeToFile(executeCommand(HttpCommand.GET, objectLocations.get(i)), embeddedObjectsDirPath, "obj" + i);
+        // TODO: Save content in the given path.
+        FileProcessor.writeToFile(executeCommand(HttpCommand.GET, objectLocations.get(i)).getContentText(), embeddedObjectsDirPath, "obj" + i);
       }
     }
     closeConnection();
@@ -121,45 +121,93 @@ public class ChatClient {
    * @return the response string from the server
    * @throws IOException propagated by methods called
    */
-  private String executeCommand(HttpCommand command, String path) throws IOException {
+  private ServerResponse executeCommand(HttpCommand command, String path) throws IOException {
     //TODO: Support the 100 continue reponse!!!!
     //TODO: Account for the content type
+    //TODO: Account for the char-set
     //TODO: Account for the character encoding.
 
     Preconditions.checkNotNull(clientSocket);
     DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
     BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
     String sentence = createCommandString(command, path);
-
-    outToServer.writeBytes(sentence); // Write to the server
+    StringBuilder contentBuilder = new StringBuilder();
+    // Send request to the server
+    outToServer.writeBytes(sentence);
     outToServer.flush();
-    StringBuilder stringBuilder = new StringBuilder();
-    String lastLine = "";
 
-    boolean chunkedEncoding = false;
-    boolean useContentLength = false;
+    //Process the header
+    List<String> headerStrings = new ArrayList<>();
+    String lastLine = "";
     while (true) {
-      chunkedEncoding = Pattern.matches("Transfer-Encoding: chunked", lastLine);
-      useContentLength = Pattern.matches("Content-Length: .*", lastLine);
-      if (chunkedEncoding) {
-        stringBuilder.append(processChunkedEncoding(inFromServer));
+      lastLine = inFromServer.readLine();
+      if (lastLine == null || Objects.equals(lastLine, "") || Objects.equals(lastLine, CR + LF)) {
         break;
-      } else if (useContentLength) {
-        // Replace all non-digits in the content line with an empty string.
-        // Retrieve integer from this result.
-        int contentLength = Integer.parseInt(lastLine.replaceAll("[\\D]", ""));
-        stringBuilder.append(processWithContentLength(inFromServer, contentLength));
+      }
+      headerStrings.add(lastLine);
+    }
+
+    //Build the response header of the server response.
+    ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+
+    // Read the contents
+    // TODO: Set the charSet in the input reader constructer and maybetransition back to Strings?
+    while (true) {
+
+      List<byte[]> bytes = new ArrayList<>();
+      if (responseHeader.getTransferEncoding() != null && responseHeader.getTransferEncoding().equals("chunked")) {
+        byte[] response = processChunkedEncoding(inFromServer);
+        while (response.length != 0) {
+          bytes.add(response);
+        }
+        for (byte[] elem:bytes){
+
+        }
+        break;
+      } else if (responseHeader.getContentLength() != null) {
+        bytes.add(processWithContentLength(inFromServer, responseHeader.getContentLength()));
         break;
       } else {
-        lastLine = inFromServer.readLine(); // Read from the server
-        if (lastLine == null || Objects.equals(lastLine, CR + LF)) {
-          break;
+        // Use in case of HTTP/1.0
+        lastLine = "";
+        contentBuilder = new StringBuilder();
+        while (lastLine != null && !lastLine.equals(CR + LF)) {
+          lastLine = inFromServer.readLine(); // Read from the server
+          contentBuilder.append(lastLine);
         }
-        stringBuilder.append(lastLine).append(LF);
       }
     }
 
-    return stringBuilder.toString();
+    String contentString = contentBuilder.toString();
+    if (contentString.length() == 0){
+      contentString = new String();
+    }
+    if (responseHeader.getCharSet() != null)
+    {
+      Charset usedCharSet = findCharSet(responseHeader.getCharSet());
+      contentString = new String(contentString.getBytes(), usedCharSet);
+    }
+    return new
+            ServerResponse(responseHeader, contentString);
+  }
+
+  private Charset findCharSet(String string) {
+    switch (string.trim().toUpperCase()) {
+      case "ISO-8859-1":
+        return StandardCharsets.ISO_8859_1;
+      case "UTF-8":
+        return StandardCharsets.UTF_8;
+      case "UTF-16":
+        return StandardCharsets.UTF_16;
+      case "UTF-16BE":
+        return StandardCharsets.UTF_16BE;
+      case "UTF-16LE":
+        return StandardCharsets.UTF_16LE;
+      case "US-ASCII":
+        return StandardCharsets.US_ASCII;
+      default:
+        return null;
+    }
   }
 
   /**
@@ -169,29 +217,28 @@ public class ChatClient {
    * @return
    * @throws IOException
    */
-  private String processChunkedEncoding(BufferedReader inFromServer) throws IOException {
-    StringBuilder result = new StringBuilder();
-    result.append(inFromServer.readLine());
-    String lengthLine = inFromServer.readLine();
-    result.append(lengthLine);
-    // Get the part until the ;
-    String[] lengthLineArray = lengthLine.split(";");
+  private byte[] processChunkedEncoding(BufferedReader inFromServer) throws IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    String[] lengthLineArray = inFromServer.readLine().split(";");
     if (lengthLineArray.length < 1) {
       //TODO: Change exception thrown
       throw new IllegalStateException();
     }
-    int messageLength = Integer.parseInt(lengthLineArray[0], 16);
-    for (int i = 0; i < messageLength; i++) {
-      result.append((char) inFromServer.read());
-    }
-    // Process the headers and 0 line
-    String lastline = "";
-    while (!Objects.equals(lastline, CR + LF) && lastline != null && !Objects.equals(lastline, "0")) {
-      lastline = inFromServer.readLine();
-      result.append(lastline);
+    //TODO: BEAUTIFY
+    if (!lengthLineArray[0].equals("")) {
+      int messageLength = Integer.parseInt(lengthLineArray[0], 16);
+      System.out.println(messageLength);
+      for (int i = 0; i < messageLength; i++) {
+        buffer.write(inFromServer.read());
+      }
+      // Process the footers and 0 line
+      String lastline = "";
+      while (!Objects.equals(lastline, CR + LF) && lastline != null && !Objects.equals(lastline, "0")) {
+        lastline = inFromServer.readLine();
+      }
     }
 
-    return result.toString();
+    return buffer.toByteArray();
   }
 
   /**
@@ -202,12 +249,12 @@ public class ChatClient {
    * @return
    * @throws IOException
    */
-  private String processWithContentLength(BufferedReader inFromServer, int contentLength) throws IOException {
-    StringBuilder stringBuilder = new StringBuilder();
+  private byte[] processWithContentLength(BufferedReader inFromServer, int contentLength) throws IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     for (int i = 0; i < contentLength; i++) {
-      stringBuilder.append((char) inFromServer.read());
+      buffer.write(inFromServer.read());
     }
-    return stringBuilder.toString();
+    return buffer.toByteArray();
   }
 
   /**
@@ -225,7 +272,6 @@ public class ChatClient {
       initialRequestLine = command.toString() + SPACE + "http://" + path + SPACE + httpVersion.toString()
               + CR + LF + CR + LF;
     } else {
-      //TODO fix error with HTTP/1.1
       initialRequestLine = command.toString() + SPACE + "http://" + path + SPACE + httpVersion.toString() + CR + LF
               + "Host: " + ipAddress.getHostName() + CR + LF + CR + LF;
     }
@@ -296,12 +342,10 @@ public class ChatClient {
    */
   public static class Builder {
 
-    //TODO: Find a way to store images locally correct. (file does not exist on other computers)
-
     // Default values.
     private int port = 80;
     private String responseDirPath = "outputs/";
-    private String embeddedObjectsDirPath = "outputs/embeddedObjects/";
+    private String embeddedObjectsDirPath = "outputs/embeddedObjects"; //TODO change this to write to the src of the image.
     private HttpVersion httpVersion = HttpVersion.HTTP_1_1;
 
     // IpAddress has to be set before building the ChatClient.

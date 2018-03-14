@@ -3,6 +3,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -27,6 +28,11 @@ public abstract class HtmlProcessor {
       }
     }
     return result;
+  }
+
+  public static Charset retrieveCharSet(String htmlPageContents){
+    Document doc = Jsoup.parse(htmlPageContents);
+    return doc.charset();
   }
 
   public String retrieveHtml(String text){
