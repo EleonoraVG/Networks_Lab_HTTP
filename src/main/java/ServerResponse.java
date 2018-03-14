@@ -43,19 +43,19 @@ public class ServerResponse {
         headerTextBuilder.append(line);
 
         // extract information from the line.
-        if (Pattern.matches("Transfer-Encoding:.*", line)) {
+        if (Pattern.matches("Transfer-Encoding:.*\r\n", line)) {
           transferEncoding = line.split(":")[1].trim();
-        } else if (Pattern.matches("Content-Length:.*", line)) {
+        } else if (Pattern.matches("Content-Length:.*\r\n", line)) {
           // Replace all non-digits in the content line with an empty string.
           // Retrieve integer from this result.
           contentLength = Integer.parseInt(line.replaceAll("[\\D]", ""));
-        } else if (Pattern.matches("Content-Encoding:.*", line)) {
+        } else if (Pattern.matches("Content-Encoding:.*\r\n", line)) {
           contentEncoding = line.split(":")[1].trim();
-        } else if (Pattern.matches("Content-Type:.*", line)) {
+        } else if (Pattern.matches("Content-Type:.*\r\n", line)) {
           String[] contentTypeSplit = line.split(":")[1].trim().split(";");
           contentType = contentTypeSplit[0].trim();
           if (contentTypeSplit.length >= 2) {
-            if (Pattern.matches("charset.*", contentTypeSplit[2].trim())) {
+            if (Pattern.matches("charset.*", contentTypeSplit[1].trim())) {
               charSet = findCharSet(contentTypeSplit[1].trim().split("=")[1]);
             }
           }
