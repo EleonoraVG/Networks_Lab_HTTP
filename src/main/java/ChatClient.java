@@ -156,10 +156,9 @@ public class ChatClient {
 
       if (responseHeader.getTransferEncoding() != null && responseHeader.getTransferEncoding().equals("chunked")) {
         byte[] response = processChunkedEncoding(inFromServer);
-        System.out.println(new String(response));
-        while (response.length != 0) {
-          bytes.add(response);
-          response = processChunkedEncoding(inFromServer);
+        bytes.add(response);
+        if (response.equals("")) {
+          break;
         }
         break;
       } else if (responseHeader.getContentLength() != null) {
@@ -229,9 +228,9 @@ public class ChatClient {
       System.out.println(messageLength);
       for (int i = 0; i < messageLength; i++) {
         buffer.write(inFromServer.read());
-        System.out.println(i);
       }
     }
+    System.out.println(buffer.toByteArray().length);
     return buffer.toByteArray();
   }
 
