@@ -7,8 +7,6 @@ public class Program {
     // The client needs at least 3 arguments.
     Preconditions.checkArgument(args.length >= 3);
 
-    //TODO: Add flags for input and outputfiles?
-
     // Check for the HTTP/1.0 flag option.
     Options options = new Options();
 

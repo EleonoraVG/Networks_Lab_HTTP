@@ -1,25 +1,24 @@
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 //TODO: Write only the HTML (content of the response to a file)
 
 public class ChatClient {
 
-  private static final String CR = "\r";
-  private static final String LF = "\n";
+  private static final Character CR = '\r';
+  private static final Character LF = '\n';
+  private static final int CRINT = 13;
+  private static final int LFINT = 10;
   private static final String SPACE = " ";
   private static final String responseFileName = "response.html";
 
@@ -51,7 +50,7 @@ public class ChatClient {
    * @param command The HTTP command to be executed
    * @throws IOException Thrown when propagated from called functions
    */
-  public void runAndSaveResult(HttpCommand command) throws IOException {
+  public void runAndSaveResult(HttpCommand command) throws IOException, InterruptedException {
     switch (httpVersion) {
       case HTTP_1_0:
         runAndSaveResultHTTP_1_0(command);
@@ -71,7 +70,7 @@ public class ChatClient {
    * @param command The HTTP command to be executed
    * @throws IOException Thrown when propagated from called functions
    */
-  private void runAndSaveResultHTTP_1_0(HttpCommand command) throws IOException {
+  private void runAndSaveResultHTTP_1_0(HttpCommand command) throws IOException, InterruptedException {
     startConnection();
     ServerResponse resultInitialCommand = executeCommand(command, ipAddress.getHostName() + "/");
     closeConnection();
@@ -99,7 +98,7 @@ public class ChatClient {
    * @param command The HTTP command to be executed
    * @throws IOException Thrown when propagated from called functions
    */
-  private void runAndSaveResultHTTP_1_1(HttpCommand command) throws IOException {
+  private void runAndSaveResultHTTP_1_1(HttpCommand command) throws IOException, InterruptedException {
     startConnection();
     ServerResponse resultInitialCommand = executeCommand(command, ipAddress.getHostName() + "/");
     System.out.println(resultInitialCommand.getContentText());
@@ -124,7 +123,7 @@ public class ChatClient {
    * @return the response string from the server
    * @throws IOException propagated by methods called
    */
-  private ServerResponse executeCommand(HttpCommand command, String path) throws IOException {
+  private ServerResponse executeCommand(HttpCommand command, String path) throws IOException, InterruptedException {
     //TODO: Support the 100 continue reponse!!!!
     //TODO: Account for the content type
     //TODO: Account for the char-set
@@ -132,55 +131,81 @@ public class ChatClient {
 
     Preconditions.checkNotNull(clientSocket);
     DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
-    BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+    DataInputStream inFromServer = new DataInputStream(clientSocket.getInputStream());
     String sentence = createCommandString(command, path);
-    StringBuilder contentBuilder = new StringBuilder();
+
+
     // Send request to the server
     outToServer.writeBytes(sentence);
     outToServer.flush();
 
-    //Process the header
+    // Process the header
+    byte[] endHeaderBytes = new byte[]{};
     List<String> headerStrings = new ArrayList<>();
-    String lastLine = "";
-    while (true) {
-      lastLine = inFromServer.readLine();
-      if (lastLine == null || Objects.equals(lastLine, "") || Objects.equals(lastLine, CR + LF)) {
-        break;
+    boolean headerDone = false;
+    while (headerDone == false) {
+      byte[] line = readOneLine(inFromServer);
+      if (Arrays.equals(line, endHeaderBytes)) {
+        headerDone = true;
       }
-      headerStrings.add(lastLine);
+      headerStrings.add(new String(line, StandardCharsets.UTF_8));
     }
 
     //Build the response header of the server response.
     ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+    System.out.println(responseHeader.getHeaderText());
 
+    // Read the contents
+    StringBuilder contentBuilder = new StringBuilder();
     while (true) {
 
       if (responseHeader.getTransferEncoding() != null && responseHeader.getTransferEncoding().equals("chunked")) {
-        String response = processChunkedEncoding(inFromServer);
-        contentBuilder.append(response);
-        if (response.equals("")) {
+        byte[] response = processChunkedEncoding(inFromServer, responseHeader.getCharSet());
+        String responseString = new String(response, responseHeader.getCharSet());
+        contentBuilder.append(responseString);
+        if (response.length == 0) {
           break;
         }
       } else if (responseHeader.getContentLength() != null) {
-        contentBuilder.append(processWithContentLength(inFromServer, responseHeader.getContentLength()));
+        contentBuilder.append(new String(processWithContentLength(inFromServer, responseHeader.getContentLength()), responseHeader.getCharSet()));
         break;
       } else {
-        // Use in case of HTTP/1.0
-        lastLine = "";
-        while (lastLine != null && !lastLine.equals(CR + LF)) {
-          lastLine = inFromServer.readLine(); // Read from the server
-          contentBuilder.append(lastLine);
-        }
+        //TODO: fix
+        break;
+//        // Use in case of HTTP/1.0
+//        lastLine = "";
+//        contentBuilder = new StringBuilder();
+//        while (lastLine != null && !lastLine.equals(CR + LF)) {
+//          lastLine = inFromServer.readLine(); // Read from the server
+//          contentBuilder.append(lastLine);
+//        }
       }
     }
 
     String contentString = contentBuilder.toString();
-    if (responseHeader.getCharSet() != null) {
-      Charset usedCharSet = findCharSet(responseHeader.getCharSet());
-      contentString = new String(contentString.getBytes("UTF-16"), usedCharSet);
+    return new ServerResponse(responseHeader, contentString);
+  }
+
+  private byte[] readOneLine(DataInputStream inFromServer) throws IOException {
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    int i;
+    while ((i = inFromServer.read()) != -1) {
+
+      if (i == CR) {
+        int nextChar = inFromServer.read();
+        if (nextChar == LF) {
+          break;
+        } else {
+          byteArrayOutputStream.write(i);
+        }
+      } else if (i == LF) {
+        break;
+      }
+      byteArrayOutputStream.write(i);
     }
-    return new
-            ServerResponse(responseHeader, contentString);
+    byteArrayOutputStream.flush();
+    byteArrayOutputStream.close();
+    return byteArrayOutputStream.toByteArray();
   }
 
   private Charset findCharSet(String string) {
@@ -200,6 +225,7 @@ public class ChatClient {
       default:
         return null;
     }
+
   }
 
   /**
@@ -209,31 +235,29 @@ public class ChatClient {
    * @return
    * @throws IOException
    */
-  private String processChunkedEncoding(BufferedReader inFromServer) throws IOException {
-    StringBuilder result = new StringBuilder();
-    String lengthLine = inFromServer.readLine();
-    // Get the part until the ;
-    String[] lengthLineArray = lengthLine.split(";");
-    if (lengthLineArray.length < 1) {
-      //TODO: Change exception thrown
-      throw new IllegalStateException();
-    }
-    if (lengthLineArray[0].equals("")) {
-      return "";
-    }
-    int messageLength = Integer.parseInt(lengthLineArray[0], 16);
 
-    for (int i = 0; i < messageLength; i++) {
-      result.append((char) inFromServer.read());
-    }
-    // Process the headers and 0 line
-    String lastline = "";
-    while (!Objects.equals(lastline, CR + LF) && lastline != null && !Objects.equals(lastline, "0")) {
-      lastline = inFromServer.readLine();
-      result.append(lastline);
+  private byte[] processChunkedEncoding(DataInputStream inFromServer, Charset charset) throws IOException {
+
+    // Read the first line
+    byte[] firstLineBytes = readOneLine(inFromServer);
+    String firstLine = new String(firstLineBytes, charset);
+    String lengthString = firstLine.split(";")[0].trim();
+
+    // Sometimes the first response is an empty string.
+    if (firstLine.equals("")) {
+      byte[] num = readOneLine(inFromServer);
+      firstLine = new String(num, charset);
+      lengthString = firstLine.split(";")[0].trim();
     }
 
-    return result.toString();
+    // Retrieve the message length.
+    int messageLength = Integer.parseInt(lengthString, 16);
+
+    // Read the content of the chunk from the server.
+    byte[] result = new byte[messageLength];
+    inFromServer.readFully(result);
+
+    return result;
   }
 
   /**
@@ -244,12 +268,10 @@ public class ChatClient {
    * @return
    * @throws IOException
    */
-  private String processWithContentLength(BufferedReader inFromServer, int contentLength) throws IOException {
-    StringBuilder result = new StringBuilder();
-    for (int i = 0; i < contentLength; i++) {
-      result.append((char) inFromServer.read());
-    }
-    return result.toString();
+  private byte[] processWithContentLength(DataInputStream inFromServer, int contentLength) throws IOException {
+    byte[] result = new byte[contentLength];
+    inFromServer.readFully(result);
+    return result;
   }
 
   /**
