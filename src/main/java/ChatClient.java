@@ -10,7 +10,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 //TODO: Write only the HTML (content of the response to a file)
 
@@ -51,7 +50,7 @@ public class ChatClient {
    * @param command The HTTP command to be executed
    * @throws IOException Thrown when propagated from called functions
    */
-  public void runAndSaveResult(HttpCommand command) throws IOException,InterruptedException {
+  public void runAndSaveResult(HttpCommand command) throws IOException, InterruptedException {
     switch (httpVersion) {
       case HTTP_1_0:
         runAndSaveResultHTTP_1_0(command);
@@ -71,7 +70,7 @@ public class ChatClient {
    * @param command The HTTP command to be executed
    * @throws IOException Thrown when propagated from called functions
    */
-  private void runAndSaveResultHTTP_1_0(HttpCommand command) throws IOException,InterruptedException {
+  private void runAndSaveResultHTTP_1_0(HttpCommand command) throws IOException, InterruptedException {
     startConnection();
     ServerResponse resultInitialCommand = executeCommand(command, ipAddress.getHostName() + "/");
     closeConnection();
@@ -99,7 +98,7 @@ public class ChatClient {
    * @param command The HTTP command to be executed
    * @throws IOException Thrown when propagated from called functions
    */
-  private void runAndSaveResultHTTP_1_1(HttpCommand command) throws IOException,InterruptedException {
+  private void runAndSaveResultHTTP_1_1(HttpCommand command) throws IOException, InterruptedException {
     startConnection();
     ServerResponse resultInitialCommand = executeCommand(command, ipAddress.getHostName() + "/");
     System.out.println(resultInitialCommand.getContentText());
@@ -124,7 +123,7 @@ public class ChatClient {
    * @return the response string from the server
    * @throws IOException propagated by methods called
    */
-  private ServerResponse executeCommand(HttpCommand command, String path) throws IOException,InterruptedException {
+  private ServerResponse executeCommand(HttpCommand command, String path) throws IOException, InterruptedException {
     //TODO: Support the 100 continue reponse!!!!
     //TODO: Account for the content type
     //TODO: Account for the char-set
@@ -162,7 +161,7 @@ public class ChatClient {
         byte[] response = processChunkedEncoding(inFromServer, responseHeader.getCharSet());
         String responseString = new String(response, responseHeader.getCharSet());
         contentBuilder.append(responseString);
-        if (response.length== 0) {
+        if (response.length == 0) {
           break;
         }
       } else if (responseHeader.getContentLength() != null) {
@@ -194,7 +193,7 @@ public class ChatClient {
         int nextChar = inFromServer.read();
         if (nextChar == LF) {
           break;
-        }else {
+        } else {
           byteArrayOutputStream.write(i);
         }
       } else if (i == LF) {
@@ -214,22 +213,27 @@ public class ChatClient {
    * @return
    * @throws IOException
    */
-  private byte[] processChunkedEncoding(DataInputStream inFromServer, Charset charset) throws IOException ,InterruptedException{
+  private byte[] processChunkedEncoding(DataInputStream inFromServer, Charset charset) throws IOException {
 
-    //Read the first line
+    // Read the first line
     byte[] firstLineBytes = readOneLine(inFromServer);
     String firstLine = new String(firstLineBytes, charset);
     String lengthString = firstLine.split(";")[0].trim();
-    if (firstLine.equals("") ) {
+
+    // Sometimes the first response is an empty string.
+    if (firstLine.equals("")) {
       byte[] num = readOneLine(inFromServer);
-      firstLine = new String(num,charset);
+      firstLine = new String(num, charset);
       lengthString = firstLine.split(";")[0].trim();
     }
+
+    // Retrieve the message length.
     int messageLength = Integer.parseInt(lengthString, 16);
 
-    System.out.println(messageLength);
+    // Read the content of the chunk from the server.
     byte[] result = new byte[messageLength];
     inFromServer.readFully(result);
+
     return result;
   }
 
@@ -242,14 +246,9 @@ public class ChatClient {
    * @throws IOException
    */
   private byte[] processWithContentLength(DataInputStream inFromServer, int contentLength) throws IOException {
-    System.out.println("ContentLength!");
-    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-    for (int i = 0; i < contentLength; i++) {
-      buffer.write(inFromServer.read());
-    }
-    buffer.flush();
-    buffer.close();
-    return buffer.toByteArray();
+    byte[] result = new byte[contentLength];
+    inFromServer.readFully(result);
+    return result;
   }
 
   /**
