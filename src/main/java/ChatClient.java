@@ -162,7 +162,7 @@ public class ChatClient {
         byte[] response = processChunkedEncoding(inFromServer, responseHeader.getCharSet());
         String responseString = new String(response, responseHeader.getCharSet());
         contentBuilder.append(responseString);
-        if (responseString.equals("")) {
+        if (response.length== 0) {
           break;
         }
       } else if (responseHeader.getContentLength() != null) {
@@ -194,6 +194,8 @@ public class ChatClient {
         int nextChar = inFromServer.read();
         if (nextChar == LF) {
           break;
+        }else {
+          byteArrayOutputStream.write(i);
         }
       } else if (i == LF) {
         break;
@@ -218,18 +220,16 @@ public class ChatClient {
     byte[] firstLineBytes = readOneLine(inFromServer);
     String firstLine = new String(firstLineBytes, charset);
     String lengthString = firstLine.split(";")[0].trim();
-    if (firstLine.equals("") || firstLine.equals("")) {
-      return new byte[]{};
+    if (firstLine.equals("") ) {
+      byte[] num = readOneLine(inFromServer);
+      firstLine = new String(num,charset);
+      lengthString = firstLine.split(";")[0].trim();
     }
     int messageLength = Integer.parseInt(lengthString, 16);
 
     System.out.println(messageLength);
-    //TODO: doesn't work WTF FML
     byte[] result = new byte[messageLength];
     inFromServer.readFully(result);
-
-    System.out.println(result[messageLength-2]);
-    System.out.println(new String(result));
     return result;
   }
 
@@ -242,6 +242,7 @@ public class ChatClient {
    * @throws IOException
    */
   private byte[] processWithContentLength(DataInputStream inFromServer, int contentLength) throws IOException {
+    System.out.println("ContentLength!");
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     for (int i = 0; i < contentLength; i++) {
       buffer.write(inFromServer.read());
