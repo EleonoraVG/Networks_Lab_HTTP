@@ -6,21 +6,21 @@ import java.util.regex.Pattern;
 public class ServerResponse {
 
   private ResponseHeader responseHeader;
-  private String contentText;
+  private byte[] content;
 
-  public ServerResponse(ResponseHeader responseHeader, String content) {
+  public ServerResponse(ResponseHeader responseHeader, byte[] content) {
     this.responseHeader = responseHeader;
     //TODO: Encode content in the given character encoding if specified.
     //TODO: Receive the content in bytes
-    contentText = content;
+    this.content = content;
   }
 
   public ResponseHeader getResponseHeader() {
     return responseHeader;
   }
 
-  public String getContentText() {
-    return contentText;
+  public byte[] getContent() {
+    return content;
   }
 
   public static class ResponseHeader {
@@ -30,9 +30,10 @@ public class ServerResponse {
     private String contentEncoding = null;
     private Charset charSet = null;
     private Integer contentLength = null;
-    private String contentType = null;
+    private ContentType contentType = null;
     private String transferEncoding = null;
     private String headerText = null;
+
 
     public ResponseHeader(List<String> headerTextList) {
       StringBuilder headerTextBuilder = new StringBuilder();
@@ -53,7 +54,7 @@ public class ServerResponse {
           contentEncoding = line.split(":")[1].trim();
         } else if (Pattern.matches("Content-Type:.*", line)) {
           String[] contentTypeSplit = line.split(":")[1].trim().split(";");
-          contentType = contentTypeSplit[0].trim();
+          contentType = new ContentType(contentTypeSplit[0].trim());
           if (contentTypeSplit.length >= 2) {
             if (Pattern.matches("charset.*", contentTypeSplit[1].trim())) {
               charSet = findCharSet(contentTypeSplit[1].trim().split("=")[1]);
@@ -64,6 +65,47 @@ public class ServerResponse {
         }
       }
       headerText = headerTextBuilder.toString();
+    }
+
+    public class ContentType {
+
+      private final String contentTypeText;
+      private final String imageType;
+      private final String textType;
+
+      public ContentType(String text) {
+        contentTypeText = text;
+        if (Pattern.matches("text/.*", contentTypeText)) {
+          imageType = contentTypeText.split("/")[1].trim();
+          textType = null;
+        } else if (Pattern.matches("image/.*", contentTypeText)) {
+          textType = contentTypeText.split("/")[1].trim();
+          imageType = null;
+        } else {
+          imageType = null;
+          textType = null;
+        }
+      }
+
+      public boolean isImage() {
+        return imageType != null;
+      }
+
+      public boolean isText() {
+        return textType != null;
+      }
+
+      public String getContentTypeText() {
+        return contentTypeText;
+      }
+
+      public String getImageType() {
+        return imageType;
+      }
+
+      public String getTextType() {
+        return textType;
+      }
     }
 
     public String getConnectionField() {
@@ -78,7 +120,7 @@ public class ServerResponse {
       return contentLength;
     }
 
-    public String getContentType() {
+    public ContentType getContentType() {
       return contentType;
     }
 

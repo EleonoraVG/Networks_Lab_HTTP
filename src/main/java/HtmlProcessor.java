@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Objects;
 
 public abstract class HtmlProcessor {
-  public static List<String> retrieveEmbeddedObjectLocations(String htmlPageContents) {
+  public static List<String> retrieveImageLocations(String htmlPageContents) {
     List<String> result = new ArrayList<>();
 
     Document document = Jsoup.parse(htmlPageContents);
