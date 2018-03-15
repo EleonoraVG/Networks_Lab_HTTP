@@ -40,18 +40,18 @@ public class ServerResponse {
       // Extract information from the header text.
       for (String line : headerTextList) {
         // Build the header text
-        headerTextBuilder.append(line);
+        headerTextBuilder.append(line+'\n');
 
         // extract information from the line.
-        if (Pattern.matches("Transfer-Encoding:.*\r\n", line)) {
+        if (Pattern.matches("Transfer-Encoding:.*", line)) {
           transferEncoding = line.split(":")[1].trim();
-        } else if (Pattern.matches("Content-Length:.*\r\n", line)) {
+        } else if (Pattern.matches("Content-Length:.*", line)) {
           // Replace all non-digits in the content line with an empty string.
           // Retrieve integer from this result.
           contentLength = Integer.parseInt(line.replaceAll("[\\D]", ""));
-        } else if (Pattern.matches("Content-Encoding:.*\r\n", line)) {
+        } else if (Pattern.matches("Content-Encoding:.*", line)) {
           contentEncoding = line.split(":")[1].trim();
-        } else if (Pattern.matches("Content-Type:.*\r\n", line)) {
+        } else if (Pattern.matches("Content-Type:.*", line)) {
           String[] contentTypeSplit = line.split(":")[1].trim().split(";");
           contentType = contentTypeSplit[0].trim();
           if (contentTypeSplit.length >= 2) {
@@ -91,6 +91,9 @@ public class ServerResponse {
     }
 
     public Charset getCharSet() {
+      if (charSet == null){
+        return StandardCharsets.UTF_8;
+      }
       return charSet;
     }
 
