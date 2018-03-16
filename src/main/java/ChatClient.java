@@ -1,3 +1,8 @@
+import Helpers.FileProcessor;
+import Helpers.HtmlProcessor;
+import Objects.HttpCommand;
+import Objects.HttpVersion;
+import Objects.ServerResponse;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
@@ -10,23 +15,20 @@ import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
-//TODO: Write only the HTML (content of the response to a file)
+//TODO: Beautify
 
 public class ChatClient {
 
   private static final Character CR = '\r';
   private static final Character LF = '\n';
-  private static final int CRINT = 13;
-  private static final int LFINT = 10;
   private static final String SPACE = " ";
-  private static final String responseFileName = "response.html";
+  private static final String responseFileName = "response";
 
   private HttpVersion httpVersion;
   private String responseDirPath;
-  private String embeddedObjectsDirPath;
   private int port;
   private InetAddress ipAddress;
   @Nullable
@@ -46,67 +48,6 @@ public class ChatClient {
   }
 
   /**
-   * Run the Http command and write the results to file.
-   * Additionally retrieve the embedded objects if the command is GET.
-   *
-   * @param command The HTTP command to be executed
-   * @throws IOException Thrown when propagated from called functions
-   */
-  public void runAndSaveResult(HttpCommand command) throws IOException, InterruptedException {
-    switch (httpVersion) {
-      case HTTP_1_0:
-        runAndSaveResultHTTP_1_0(command);
-        break;
-      case HTTP_1_1:
-        runAndSaveResultHTTP_1_1(command);
-        break;
-    }
-  }
-
-  /**
-   * Run the httpCommand and retrieve the embedded objects if the issued command was GET.
-   * Start and close a new connection with every executed HTTP command.
-   * <p>
-   * Use for HTTP/1.0
-   *
-   * @param command The HTTP command to be executed
-   * @throws IOException Thrown when propagated from called functions
-   */
-  private void runAndSaveResultHTTP_1_0(HttpCommand command) throws IOException, InterruptedException {
-    startConnection();
-    DataInputStream inFromServer = new DataInputStream(clientSocket.getInputStream());
-    DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
-    ServerResponse serverResponse = executeCommand(inFromServer, outToServer, command, ipAddress.getHostName() + "/");
-    inFromServer.close();
-    outToServer.close();
-    closeConnection();
-
-    if (serverResponse.getResponseHeader().getContentType() == null || serverResponse.getResponseHeader().getContentType().isText()) {
-      // Write the text response to file.
-      String text = new String(serverResponse.getContent(), serverResponse.getResponseHeader().getCharSet());
-      FileProcessor.writeToFile(text, responseDirPath, responseFileName);
-      System.out.println(serverResponse.getResponseHeader());
-
-      if (command.equals(HttpCommand.GET)) {
-        List<String> objectLocations = HtmlProcessor.retrieveImageLocations(text);
-        for (int i = 0; i < objectLocations.size(); i++) {
-          startConnection();
-          inFromServer = new DataInputStream(clientSocket.getInputStream());
-          outToServer = new DataOutputStream(clientSocket.getOutputStream());
-          ServerResponse response = executeCommand(inFromServer, outToServer, HttpCommand.GET, objectLocations.get(i));
-          // Process the image contents
-          if (!response.getResponseHeader().getContentType().isImage()) {
-            throw new IllegalStateException("The responseHeader does not indicate this as an image.");
-          }
-          BufferedImage image = ImageIO.read(new ByteArrayInputStream(response.getContent()));
-          ImageIO.write(image, "png", new File(embeddedObjectsDirPath + "Obj.png"));
-          closeConnection();
-        }
-      }
-    }
-  }
-
-  /**
    * Start the connection to the server, run the httpCommand,
    * retrieve the embedded objects and subsequently close the connection.
    * <p>
@@ -115,68 +56,87 @@ public class ChatClient {
    * @param command The HTTP command to be executed
    * @throws IOException Thrown when propagated from called functions
    */
-  private void runAndSaveResultHTTP_1_1(HttpCommand command) throws IOException, InterruptedException {
-    startConnection();
-    DataInputStream inFromServer = new DataInputStream(clientSocket.getInputStream());
-    DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
-    ServerResponse serverResponse = executeCommand(inFromServer, outToServer, command, ipAddress.getHostName() + "/");
+  public void runAndSaveResult(HttpCommand command) throws IOException {
 
-    if (serverResponse.getResponseHeader().getContentType() == null || serverResponse.getResponseHeader().getContentType().isText()) {
+    DataInputStream inFromServer = null;
+    DataOutputStream outToServer = null;
+
+    // Establish an initial connection in case of HTTP/1.1
+    if (httpVersion.equals(HttpVersion.HTTP_1_1)) {
+      startConnection();
+      inFromServer = new DataInputStream(clientSocket.getInputStream());
+      outToServer = new DataOutputStream(clientSocket.getOutputStream());
+    }
+    ServerResponse serverResponse = executeCommand(inFromServer, outToServer, createCommandString(command, ipAddress.getHostName() + "/"));
+
+    if (serverResponse.isText()) {
       // Write the text response to file.
       String text = new String(serverResponse.getContent(), serverResponse.getResponseHeader().getCharSet());
-      FileProcessor.writeToFile(text, responseDirPath, responseFileName);
-      System.out.println(serverResponse.getResponseHeader());
+      FileProcessor.writeToFile(HtmlProcessor.MakeAllImgPathsRelativeInHtml(text), responseDirPath + responseFileName + "." + serverResponse.getTextType());
 
+      // Print response text.
+      System.out.println(text);
 
-      // Write the response to file
-      FileProcessor.writeToFile(text, responseDirPath, responseFileName);
       if (command.equals(HttpCommand.GET)) {
-        List<String> objectLocations = HtmlProcessor.retrieveImageLocations(text);
-        for (int i = 0; i < objectLocations.size(); i++) {
-          ServerResponse response = executeCommand(inFromServer, outToServer, HttpCommand.GET, objectLocations.get(i));
-          // Process the image contents
-          if (!serverResponse.getResponseHeader().getContentType().isImage()) {
-            throw new IllegalStateException("The responseHeader does not indicate this as an image.");
+        List<String> imageLocations = HtmlProcessor.retrieveImageLocations(text);
+        imageLocations = imageLocations.stream().filter(x -> !x.isEmpty()).collect(Collectors.toList());
+        for (String imgLoc : imageLocations) {
+          //TODO: clean this up.
+          String commandString;
+          if (httpVersion.equals(HttpVersion.HTTP_1_1)) {
+            commandString = "GET" + SPACE + "http://" + ipAddress.getHostName() + "/" + imgLoc + SPACE + httpVersion.toString() + CR.toString() + LF.toString() + "Host:" + SPACE + ipAddress.getHostName() + CR.toString() + LF.toString() + CR.toString() + LF.toString();
+          } else {
+            commandString = "GET" + SPACE + "http://" + ipAddress.getHostName() + "/" + imgLoc + SPACE + httpVersion.toString() + CR.toString() + LF.toString() + CR.toString() + LF.toString();
           }
-          // TODO: Save content in the given path.
-          BufferedImage image = ImageIO.read(new ByteArrayInputStream(response.getContent()));
-          ImageIO.write(image, response.getResponseHeader().getContentType().getImageType(), new File(embeddedObjectsDirPath + "Obj.png"));
+          serverResponse = executeCommand(inFromServer, outToServer, commandString);
+          System.out.println(serverResponse.getResponseHeader().getHeaderText());
+          if (!serverResponse.isImage()) {
+            throw new IllegalStateException("The responseHeader does not indicate this as an image.");
+          } else {
+            // Process the image contents
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(serverResponse.getContent()));
+            FileProcessor.writeImageToFile(image, serverResponse.getImageType(), responseDirPath + imgLoc);
+          }
         }
       }
     }
-    inFromServer.close();
-    outToServer.close();
-    closeConnection();
+
+    // Close the connection after all commands are executed.
+    if (httpVersion.equals(HttpVersion.HTTP_1_1)) {
+      inFromServer.close();
+      outToServer.close();
+      closeConnection();
+    }
   }
 
   /**
-   * //TODO: Currently assumes that given bytes are characters.
+   * Write the commandString to the server and return the serverResponse.
    *
-   * @param command HTTP command send to the server
-   * @param path    Argument of the HTTP command to the server
-   * @return the response string from the server
-   * @throws IOException propagated by methods called
+   * @param inFromServer  The dataInputStream to read from
+   * @param outToServer   The dataOutputStream to write to
+   * @param commandString HTTP command send to the server
+   * @return the response from the server
+   * @throws IOException
    */
-  private ServerResponse executeCommand(DataInputStream inFromServer, DataOutputStream outToServer, HttpCommand
-          command, String path) throws IOException, InterruptedException {
-    //TODO: Support the 100 continue reponse!!!!
-    //TODO: Account for the content type
+  private ServerResponse executeCommand(DataInputStream inFromServer, DataOutputStream outToServer, String commandString) throws IOException {
     //TODO: Account for the character encoding.
-
-    Preconditions.checkNotNull(clientSocket);
-    String sentence = createCommandString(command, path);
+    if (httpVersion.equals(HttpVersion.HTTP_1_0)) {
+      // HTTP/1.0 opens a new connection for every command.
+      startConnection();
+      inFromServer = new DataInputStream(clientSocket.getInputStream());
+      outToServer = new DataOutputStream(clientSocket.getOutputStream());
+    }
 
     // Send request to the server
-    outToServer.writeBytes(sentence);
+    outToServer.writeBytes(commandString);
     outToServer.flush();
 
     // Process the header
-    byte[] endHeaderBytes = new byte[]{};
     List<String> headerStrings = new ArrayList<>();
     boolean headerDone = false;
-    while (headerDone == false) {
+    while (!headerDone) {
       byte[] line = readOneLine(inFromServer);
-      if (Arrays.equals(line, endHeaderBytes)) {
+      if (line.length == 0) {
         headerDone = true;
       }
       headerStrings.add(new String(line, StandardCharsets.UTF_8));
@@ -184,56 +144,85 @@ public class ChatClient {
 
     //Build the response header of the server response.
     ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
-    System.out.println(responseHeader.getHeaderText());
+
+    if (responseHeader.getReturnCode() == 100) {
+      // Retry the command.
+      executeCommand(inFromServer, outToServer, commandString);
+    }
 
     // Read the contents
     ByteArrayOutputStream contentBytesStream = new ByteArrayOutputStream();
-    while (true) {
-      byte[] response;
-      if (responseHeader.getTransferEncoding() != null && responseHeader.getTransferEncoding().equals("chunked")) {
-        response = processChunkedEncoding(inFromServer, responseHeader.getCharSet());
+
+    byte[] response;
+    if (responseHeader.getTransferEncoding() != null && responseHeader.getTransferEncoding().equals("chunked")) {
+
+      // Process chunks.
+      response = readChunkFromServer(inFromServer, responseHeader.getCharSet());
+      while (response.length != 0) {
         contentBytesStream.write(response);
-        if (response.length == 0) {
-          break;
-        }
-      } else if (responseHeader.getContentLength() != null) {
-        response = processWithContentLength(inFromServer, responseHeader.getContentLength());
-        contentBytesStream.write(response);
-        break;
-      } else {
-        //TODO: fix
-        byte[] line = readOneLine(inFromServer);
-        while (line != null && line.length != 0) {
-          contentBytesStream.write(line);
-          line = readOneLine(inFromServer);
-        }
-        break;
+        response = readChunkFromServer(inFromServer, responseHeader.getCharSet());
       }
+
+    } else if (responseHeader.getContentLength() != null) {
+
+      // read from server for given length.
+      response = processWithContentLength(inFromServer, responseHeader.getContentLength());
+      contentBytesStream.write(response);
+    } else {
+
+      // Use in case of HTTP/1.0
+      byte[] line = readOneLine(inFromServer);
+      while (line != null && line.length != 0) {
+        contentBytesStream.write(line);
+        line = readOneLine(inFromServer);
+      }
+
     }
-    // Clear out the DataInputStream.
+
+    // Clear out and close the DataInputStream.
     while (inFromServer.available() != 0) {
       readOneLine(inFromServer);
     }
     contentBytesStream.flush();
     contentBytesStream.close();
+
+    // Http/1.0 closes the connection for every command.
+    if (httpVersion.equals(HttpVersion.HTTP_1_0)) {
+      inFromServer.close();
+      outToServer.close();
+      closeConnection();
+    }
     return new ServerResponse(responseHeader, contentBytesStream.toByteArray());
   }
 
+  /**
+   * Read bytes from the server until the end of a line.
+   *
+   * @param inFromServer
+   * @return a byte array containing the bytes of one line.
+   * @throws IOException
+   */
   private byte[] readOneLine(DataInputStream inFromServer) throws IOException {
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
     int i;
     while ((i = inFromServer.read()) != -1) {
 
+      // Check for the end of a line.
+      boolean lineEnded = false;
       if (i == CR) {
         int nextChar = inFromServer.read();
         if (nextChar == LF) {
-          break;
-        } else {
-          byteArrayOutputStream.write(i);
+          lineEnded = true;
         }
       } else if (i == LF) {
+        lineEnded = true;
+      }
+
+      // Break if the line ended.
+      if (lineEnded) {
         break;
       }
+      // Write to the byteArrayOutputSteam otherwise.
       byteArrayOutputStream.write(i);
     }
     byteArrayOutputStream.flush();
@@ -242,13 +231,13 @@ public class ChatClient {
   }
 
   /**
-   * Process the response from the server when using chunked encoding.
+   * Read in one chunk in from the server.
    *
    * @param inFromServer
-   * @return
+   * @return A byte array containing he contents of the chunk.
    * @throws IOException
    */
-  private byte[] processChunkedEncoding(DataInputStream inFromServer, Charset charset) throws IOException {
+  private byte[] readChunkFromServer(DataInputStream inFromServer, Charset charset) throws IOException {
 
     // Read the first line
     byte[] firstLineBytes = readOneLine(inFromServer);
@@ -295,30 +284,26 @@ public class ChatClient {
    */
   private String createCommandString(HttpCommand command, String path) throws IOException {
     Preconditions.checkNotNull(command);
-    String initialRequestLine;
-    if (httpVersion.equals(HttpVersion.HTTP_1_0)) {
-      //TODO fix appending http:// only when necessary !!!
-      initialRequestLine = command.toString() + SPACE + "http://" + path + SPACE + httpVersion.toString()
-              + CR + LF + CR + LF;
-    } else {
-      initialRequestLine = command.toString() + SPACE + "http://" + path + SPACE + httpVersion.toString() + CR + LF
-              + "Host: " + ipAddress.getHostName() + CR + LF + CR + LF;
+    //TODO fix appending http:// only when necessary !!!
+    String result = command.toString() + SPACE + "http://" + path + SPACE + httpVersion.toString();
+    if (httpVersion.equals(HttpVersion.HTTP_1_1)) {
+      result += CR.toString() + LF.toString() + "Host: " + ipAddress.getHostName();
     }
-    BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
-    String result;
-    if (command == HttpCommand.GET || command == HttpCommand.HEAD) {
-      result = initialRequestLine;
-    } else {
-      // The command is either POST or PUT
+
+    if (command.equals(HttpCommand.POST) || command.equals(HttpCommand.PUT)) {
       try {
         // Read one line of user input.
+        BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
         String input = inFromUser.readLine();
-        result = initialRequestLine + input;
+        inFromUser.close();
+        result += CR.toString()  +LF.toString()+ "Content-Length:" + SPACE + input.trim().length()+CR.toString()+LF.toString() +CR.toString() +LF.toString()+input;
       } catch (IOException e) {
         System.out.println("Error while reading user input");
         throw e;
       }
+
     }
+    result += CR.toString() + LF.toString() + CR.toString() + LF.toString();
     return result;
   }
 
@@ -374,7 +359,6 @@ public class ChatClient {
     // Default values.
     private int port = 80;
     private String responseDirPath = "outputs/";
-    private String embeddedObjectsDirPath = "outputs/embeddedObjects/"; //TODO change this to write to the src of the image.
     private HttpVersion httpVersion = HttpVersion.HTTP_1_1;
 
     // IpAddress has to be set before building the ChatClient.
@@ -404,17 +388,10 @@ public class ChatClient {
       return this;
     }
 
-    public ChatClient.Builder setEmbeddedObjectsDirPath(String responseFilePath) {
-      Preconditions.checkNotNull(responseFilePath);
-      this.responseDirPath = responseFilePath;
-      return this;
-    }
-
     public ChatClient build() {
       ChatClient client = new ChatClient();
       client.ipAddress = ipAddress;
       client.port = port;
-      client.embeddedObjectsDirPath = embeddedObjectsDirPath;
       client.responseDirPath = responseDirPath;
       client.httpVersion = httpVersion;
       return client;

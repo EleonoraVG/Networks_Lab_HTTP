@@ -1,3 +1,5 @@
+package Objects;
+
 public enum HttpCommand {
 
   HEAD, GET, PUT, POST;

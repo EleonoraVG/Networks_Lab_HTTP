@@ -1,8 +1,11 @@
+package Objects;
+
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.regex.Pattern;
 
+//TODO: Comments!!!!
 public class ServerResponse {
 
   private ResponseHeader responseHeader;
@@ -10,8 +13,6 @@ public class ServerResponse {
 
   public ServerResponse(ResponseHeader responseHeader, byte[] content) {
     this.responseHeader = responseHeader;
-    //TODO: Encode content in the given character encoding if specified.
-    //TODO: Receive the content in bytes
     this.content = content;
   }
 
@@ -23,9 +24,29 @@ public class ServerResponse {
     return content;
   }
 
+  public boolean isText() {
+    return responseHeader.getContentType().isText();
+  }
+
+  public boolean isImage() {
+    if (responseHeader.getContentType() == null){
+      return false;
+    }
+    return responseHeader.getContentType().isImage();
+  }
+
+  public String getImageType() {
+    return responseHeader.getContentType().getImageType();
+  }
+
+  public String getTextType() {
+    return responseHeader.getContentType().getTextType();
+  }
+
   public static class ResponseHeader {
     //Only keeps the header elements that are important for use
     //TODO: expand to all standard headers.
+    private int returnCode;
     private String connectionField = null;
     private String contentEncoding = null;
     private Charset charSet = null;
@@ -44,6 +65,9 @@ public class ServerResponse {
         headerTextBuilder.append(line + '\n');
 
         // extract information from the line.
+        if (Pattern.matches("HTTP/.*",line)){
+          returnCode = Integer.parseInt(line.split(" ")[1]);
+        }
         if (Pattern.matches("Transfer-Encoding:.*", line)) {
           transferEncoding = line.split(":")[1].trim();
         } else if (Pattern.matches("Content-Length:.*", line)) {
@@ -67,20 +91,20 @@ public class ServerResponse {
       headerText = headerTextBuilder.toString();
     }
 
-    public class ContentType {
+    private class ContentType {
 
       private final String contentTypeText;
       private final String imageType;
       private final String textType;
 
-      public ContentType(String text) {
+      private ContentType(String text) {
         contentTypeText = text;
         if (Pattern.matches("text/.*", contentTypeText)) {
-          imageType = contentTypeText.split("/")[1].trim();
-          textType = null;
-        } else if (Pattern.matches("image/.*", contentTypeText)) {
           textType = contentTypeText.split("/")[1].trim();
           imageType = null;
+        } else if (Pattern.matches("image/.*", contentTypeText)) {
+          imageType = contentTypeText.split("/")[1].trim();
+          textType = null;
         } else {
           imageType = null;
           textType = null;
@@ -106,6 +130,7 @@ public class ServerResponse {
       public String getTextType() {
         return textType;
       }
+
     }
 
     public String getConnectionField() {
@@ -137,6 +162,10 @@ public class ServerResponse {
         return StandardCharsets.UTF_8;
       }
       return charSet;
+    }
+
+    public int getReturnCode() {
+      return returnCode;
     }
 
     private Charset findCharSet(String string) {
