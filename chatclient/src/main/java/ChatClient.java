@@ -1,8 +1,8 @@
-import Helpers.FileProcessor;
-import Helpers.HtmlProcessor;
-import Objects.HttpCommand;
-import Objects.HttpVersion;
-import Objects.ServerResponse;
+import HTTPLib.FileProcessor;
+import HTTPLib.HtmlProcessor;
+import HTTPLib.HttpCommand;
+import HTTPLib.HttpVersion;
+import HTTPLib.ServerResponse;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
@@ -295,6 +295,7 @@ public class ChatClient {
       try {
         // Read one line of user input.
         BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("Write content: ");
         String input = inFromUser.readLine();
         inFromUser.close();
         result += CR.toString()  +LF.toString()+ "Content-Length:" + SPACE + input.trim().length()+CR.toString()+LF.toString() +CR.toString() +LF.toString()+input;
