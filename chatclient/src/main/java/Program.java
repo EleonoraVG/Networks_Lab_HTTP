@@ -1,5 +1,5 @@
-import Objects.HttpCommand;
-import Objects.HttpVersion;
+import Objects.HTTPCommand;
+import Objects.HTTPVersion;
 import com.google.common.base.Preconditions;
 import org.apache.commons.cli.*;
 
@@ -21,7 +21,7 @@ public class Program {
     Boolean useHttp10 = cmd.hasOption(http10.getOpt());
 
     // Process command line arguments
-    HttpCommand httpCommand = HttpCommand.fromString(args[0]);
+    HTTPCommand httpCommand = HTTPCommand.fromString(args[0]);
     String url = args[1];
     int port = Integer.parseInt(args[2]);
 
@@ -31,7 +31,7 @@ public class Program {
       chatClient = ChatClient.newBuilder()
               .setIpAddress(url)
               .setPort(port)
-              .setHttpVersion(HttpVersion.HTTP_1_0)
+              .setHTTPVersion(HTTPVersion.HTTP_1_0)
               .build();
     } else {
       chatClient = ChatClient.newBuilder()

@@ -1,4 +1,4 @@
-package Processors;
+package Helpers;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;

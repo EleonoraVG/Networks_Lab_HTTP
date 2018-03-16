@@ -1,11 +1,11 @@
 package Objects;
 
-public enum HttpCommand {
+public enum HTTPCommand {
 
   HEAD, GET, PUT, POST;
 
-  public static HttpCommand fromString(String string) {
-    HttpCommand command;
+  public static HTTPCommand fromString(String string) {
+    HTTPCommand command;
     switch (string) {
       case "HEAD":
         command = HEAD;

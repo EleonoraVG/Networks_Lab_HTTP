@@ -1,11 +1,11 @@
 package Objects;
 
-public enum HttpVersion {
+public enum HTTPVersion {
   HTTP_1_1("HTTP/1.1"),HTTP_1_0("HTTP/1.0");
 
   private final String stringVersion;
 
-  HttpVersion(String value){
+  HTTPVersion(String value){
     stringVersion = value;
   }
 

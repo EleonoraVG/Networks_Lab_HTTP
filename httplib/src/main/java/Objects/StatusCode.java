@@ -4,7 +4,7 @@ package Objects;
 public enum StatusCode {
   STATUS_CODE_100(100),
   STATUS_CODE_200(200),
-  STATUS_CODE_404(404),
+  STATUS_CODE_400(400),
   STATUS_CODE_500(500),
   STATUS_CODE_304(304);
 
@@ -19,7 +19,7 @@ public enum StatusCode {
       case 200:
         stringStatus = "200 OK";
         break;
-      case 404:
+      case 400:
         stringStatus = "400 Bad Request";
         break;
       case 500:
@@ -45,8 +45,8 @@ public enum StatusCode {
         return STATUS_CODE_100;
       case 200:
         return STATUS_CODE_200;
-      case 404:
-        return STATUS_CODE_404;
+      case 400:
+        return STATUS_CODE_400;
       case 500:
         return STATUS_CODE_500;
       case 304:

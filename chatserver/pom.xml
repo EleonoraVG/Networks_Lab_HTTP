@@ -7,6 +7,17 @@
     <groupId>cs.kuleuven.be</groupId>
     <artifactId>chat-server</artifactId>
     <version>1.0-SNAPSHOT</version>
-
-    
+    <dependencies>
+        <dependency>
+            <groupId>cs.kuleuven.be</groupId>
+            <artifactId>http-lib</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>24.0-jre</version>
+        </dependency>
+    </dependencies>
 </project>

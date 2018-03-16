@@ -1,11 +1,10 @@
-import Processors.FileProcessor;
-import Processors.HtmlProcessor;
-import Objects.HttpCommand;
-import Objects.HttpVersion;
+import Helpers.FileProcessor;
+import Helpers.HtmlProcessor;
+import Objects.HTTPCommand;
+import Objects.HTTPVersion;
 import Objects.ServerResponse;
 import com.google.common.base.Preconditions;
 
-import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -18,6 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static Helpers.HTTPHelper.startConnectionSocket;
+
 //TODO: Beautify
 
 public class ChatClient {
@@ -27,11 +28,10 @@ public class ChatClient {
   private static final String SPACE = " ";
   private static final String responseFileName = "response";
 
-  private HttpVersion httpVersion;
+  private HTTPVersion HTTPVersion;
   private String responseDirPath;
   private int port;
   private InetAddress ipAddress;
-  @Nullable
   private Socket clientSocket;
 
   private ChatClient() {
@@ -56,13 +56,13 @@ public class ChatClient {
    * @param command The HTTP command to be executed
    * @throws IOException Thrown when propagated from called functions
    */
-  public void runAndSaveResult(HttpCommand command) throws IOException {
+  public void runAndSaveResult(HTTPCommand command) throws IOException {
 
     DataInputStream inFromServer = null;
     DataOutputStream outToServer = null;
 
     // Establish an initial connection in case of HTTP/1.1
-    if (httpVersion.equals(HttpVersion.HTTP_1_1)) {
+    if (HTTPVersion.equals(HTTPVersion.HTTP_1_1)) {
       startConnection();
       inFromServer = new DataInputStream(clientSocket.getInputStream());
       outToServer = new DataOutputStream(clientSocket.getOutputStream());
@@ -77,16 +77,16 @@ public class ChatClient {
       // Print response text.
       System.out.println(text);
 
-      if (command.equals(HttpCommand.GET)) {
+      if (command.equals(HTTPCommand.GET)) {
         List<String> imageLocations = HtmlProcessor.retrieveImageLocations(text);
         imageLocations = imageLocations.stream().filter(x -> !x.isEmpty()).collect(Collectors.toList());
         for (String imgLoc : imageLocations) {
           //TODO: clean this up.
           String commandString;
-          if (httpVersion.equals(HttpVersion.HTTP_1_1)) {
-            commandString = "GET" + SPACE + "http://" + ipAddress.getHostName() + "/" + imgLoc + SPACE + httpVersion.toString() + CR.toString() + LF.toString() + "Host:" + SPACE + ipAddress.getHostName() + CR.toString() + LF.toString() + CR.toString() + LF.toString();
+          if (HTTPVersion.equals(HTTPVersion.HTTP_1_1)) {
+            commandString = "GET" + SPACE + "http://" + ipAddress.getHostName() + "/" + imgLoc + SPACE + HTTPVersion.toString() + CR.toString() + LF.toString() + "Host:" + SPACE + ipAddress.getHostName() + CR.toString() + LF.toString() + CR.toString() + LF.toString();
           } else {
-            commandString = "GET" + SPACE + "http://" + ipAddress.getHostName() + "/" + imgLoc + SPACE + httpVersion.toString() + CR.toString() + LF.toString() + CR.toString() + LF.toString();
+            commandString = "GET" + SPACE + "http://" + ipAddress.getHostName() + "/" + imgLoc + SPACE + HTTPVersion.toString() + CR.toString() + LF.toString() + CR.toString() + LF.toString();
           }
           serverResponse = executeCommand(inFromServer, outToServer, commandString);
           System.out.println(serverResponse.getResponseHeader().getHeaderText());
@@ -102,7 +102,7 @@ public class ChatClient {
     }
 
     // Close the connection after all commands are executed.
-    if (httpVersion.equals(HttpVersion.HTTP_1_1)) {
+    if (HTTPVersion.equals(HTTPVersion.HTTP_1_1)) {
       inFromServer.close();
       outToServer.close();
       closeConnection();
@@ -120,7 +120,7 @@ public class ChatClient {
    */
   private ServerResponse executeCommand(DataInputStream inFromServer, DataOutputStream outToServer, String commandString) throws IOException {
     //TODO: Account for the character encoding.
-    if (httpVersion.equals(HttpVersion.HTTP_1_0)) {
+    if (HTTPVersion.equals(HTTPVersion.HTTP_1_0)) {
       // HTTP/1.0 opens a new connection for every command.
       startConnection();
       inFromServer = new DataInputStream(clientSocket.getInputStream());
@@ -187,7 +187,7 @@ public class ChatClient {
     contentBytesStream.close();
 
     // Http/1.0 closes the connection for every command.
-    if (httpVersion.equals(HttpVersion.HTTP_1_0)) {
+    if (HTTPVersion.equals(HTTPVersion.HTTP_1_0)) {
       inFromServer.close();
       outToServer.close();
       closeConnection();
@@ -282,16 +282,16 @@ public class ChatClient {
    * @param path    path in the initial request line.
    * @throws IOException Throw if error occurs while reading user input.
    */
-  private String createCommandString(HttpCommand command, String path) throws IOException {
+  private String createCommandString(HTTPCommand command, String path) throws IOException {
     Preconditions.checkNotNull(command);
     //TODO fix appending http:// only when necessary !!!
-    String result = command.toString() + SPACE + "http://" + path + SPACE + httpVersion.toString();
-    if (httpVersion.equals(HttpVersion.HTTP_1_1)) {
+    String result = command.toString() + SPACE + "http://" + path + SPACE + HTTPVersion.toString();
+    if (HTTPVersion.equals(HTTPVersion.HTTP_1_1)) {
       result += CR.toString() + LF.toString() + "Host: " + ipAddress.getHostName();
     }
 
     //TODO: Test POST and PUT methods!!!!
-    if (command.equals(HttpCommand.POST) || command.equals(HttpCommand.PUT)) {
+    if (command.equals(HTTPCommand.POST) || command.equals(HTTPCommand.PUT)) {
       try {
         // Read one line of user input.
         BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
@@ -331,20 +331,6 @@ public class ChatClient {
   }
 
   /**
-   * Create a stream socket and connect to the specified port number at the ip address.
-   *
-   * @throws IOException Thrown if error occurred during socket creation.
-   */
-  private static Socket startConnectionSocket(InetAddress ipAddress, int port) throws IOException {
-    try {
-      return new Socket(ipAddress, port);
-    } catch (IOException e) {
-      System.out.println("Something went wrong in creating and connecting the socket.");
-      throw e;
-    }
-  }
-
-  /**
    * Check the that the port is in the expected range from 0 to 65535.
    */
   private static boolean isValidPort(int port) {
@@ -361,7 +347,7 @@ public class ChatClient {
     // Default values.
     private int port = 80;
     private String responseDirPath = "outputs/";
-    private HttpVersion httpVersion = HttpVersion.HTTP_1_1;
+    private HTTPVersion HTTPVersion = Objects.HTTPVersion.HTTP_1_1;
 
     // IpAddress has to be set before building the ChatClient.
     private InetAddress ipAddress;
@@ -379,8 +365,8 @@ public class ChatClient {
       return this;
     }
 
-    public ChatClient.Builder setHttpVersion(HttpVersion version) {
-      httpVersion = version;
+    public ChatClient.Builder setHTTPVersion(HTTPVersion version) {
+      HTTPVersion = version;
       return this;
     }
 
@@ -395,7 +381,7 @@ public class ChatClient {
       client.ipAddress = ipAddress;
       client.port = port;
       client.responseDirPath = responseDirPath;
-      client.httpVersion = httpVersion;
+      client.HTTPVersion = HTTPVersion;
       return client;
     }
   }
