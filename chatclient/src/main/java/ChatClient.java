@@ -147,6 +147,7 @@ public class ChatClient {
 
     if (responseHeader.getStatusCode().getCode() == 100) {
       // Retry the command.
+      // Only possible with HTML.
       executeCommand(inFromServer, outToServer, commandString);
     }
 
