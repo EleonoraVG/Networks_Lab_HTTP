@@ -1,8 +1,8 @@
-import HTTPLib.FileProcessor;
-import HTTPLib.HtmlProcessor;
-import HTTPLib.HttpCommand;
-import HTTPLib.HttpVersion;
-import HTTPLib.ServerResponse;
+import Processors.FileProcessor;
+import Processors.HtmlProcessor;
+import Objects.HttpCommand;
+import Objects.HttpVersion;
+import Objects.ServerResponse;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;

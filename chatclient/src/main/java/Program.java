@@ -1,5 +1,5 @@
-import HTTPLib.HttpCommand;
-import HTTPLib.HttpVersion;
+import Objects.HttpCommand;
+import Objects.HttpVersion;
 import com.google.common.base.Preconditions;
 import org.apache.commons.cli.*;
 

@@ -1,4 +1,4 @@
-package HTTPLib;
+package Processors;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
