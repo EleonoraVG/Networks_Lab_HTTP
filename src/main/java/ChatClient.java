@@ -290,6 +290,7 @@ public class ChatClient {
       result += CR.toString() + LF.toString() + "Host: " + ipAddress.getHostName();
     }
 
+    //TODO: Test POST and PUT methods!!!!
     if (command.equals(HttpCommand.POST) || command.equals(HttpCommand.PUT)) {
       try {
         // Read one line of user input.
