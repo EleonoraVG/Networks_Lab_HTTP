@@ -11,7 +11,7 @@ public enum StatusCode {
   private final String stringStatus;
   private final int code;
 
-  StatusCode(int code) throws IllegalArgumentException {
+  StatusCode(int code) {
     switch (code) {
       case 100:
         stringStatus = "100 Continue";
@@ -19,7 +19,7 @@ public enum StatusCode {
       case 200:
         stringStatus = "200 OK";
         break;
-      case 400:
+      case 404:
         stringStatus = "400 Bad Request";
         break;
       case 500:
@@ -30,7 +30,6 @@ public enum StatusCode {
         break;
       default:
         throw new IllegalArgumentException();
-
     }
     this.code = code;
   }
@@ -38,5 +37,26 @@ public enum StatusCode {
   @Override
   public String toString() {
     return stringStatus;
+  }
+
+  public static StatusCode getStatusCodeForInt(int code) {
+    switch (code) {
+      case 100:
+        return STATUS_CODE_100;
+      case 200:
+        return STATUS_CODE_200;
+      case 404:
+        return STATUS_CODE_404;
+      case 500:
+        return STATUS_CODE_500;
+      case 304:
+        return STATUS_CODE_304;
+      default:
+        throw new IllegalArgumentException();
+    }
+  }
+
+  public int getCode() {
+    return code;
   }
 }

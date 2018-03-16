@@ -145,7 +145,7 @@ public class ChatClient {
     //Build the response header of the server response.
     ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
 
-    if (responseHeader.getReturnCode() == 100) {
+    if (responseHeader.getStatusCode().getCode() == 100) {
       // Retry the command.
       executeCommand(inFromServer, outToServer, commandString);
     }

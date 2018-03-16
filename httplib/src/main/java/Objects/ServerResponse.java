@@ -46,7 +46,7 @@ public class ServerResponse {
   public static class ResponseHeader {
     //Only keeps the header elements that are important for use
     //TODO: expand to all standard headers.
-    private StatusCode returnCode;
+    private StatusCode statusCode;
     private String connectionField = null;
     private String contentEncoding = null;
     private Charset charSet = null;
@@ -66,7 +66,7 @@ public class ServerResponse {
 
         // extract information from the line.
         if (Pattern.matches("HTTP/.*",line)){
-          returnCode = HInteger.parseInt(line.split(" ")[1]);
+          statusCode = StatusCode.getStatusCodeForInt(Integer.parseInt(line.split(" ")[1]));
         }
         if (Pattern.matches("Transfer-Encoding:.*", line)) {
           transferEncoding = line.split(":")[1].trim();
@@ -164,8 +164,8 @@ public class ServerResponse {
       return charSet;
     }
 
-    public int getReturnCode() {
-      return returnCode;
+    public StatusCode getStatusCode() {
+      return statusCode;
     }
 
     private Charset findCharSet(String string) {
