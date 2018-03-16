@@ -2,17 +2,36 @@ package Objects;
 
 
 public enum StatusCode {
-  STATUS_CODE_100("100 Continue", 100),
-  STATUS_CODE_200("200 OK", 200),
-  STATUS_CODE_404("400 Bad Request", 404),
-  STATUS_CODE_500("500 Server Error", 500),
-  STATUS_CODE_304("304 Not Modified", 304);
+  STATUS_CODE_100(100),
+  STATUS_CODE_200(200),
+  STATUS_CODE_404(404),
+  STATUS_CODE_500(500),
+  STATUS_CODE_304(304);
 
   private final String stringStatus;
   private final int code;
 
-  StatusCode(String value, int code) {
-    stringStatus = value;
+  StatusCode(int code) throws IllegalArgumentException {
+    switch (code) {
+      case 100:
+        stringStatus = "100 Continue";
+        break;
+      case 200:
+        stringStatus = "200 OK";
+        break;
+      case 400:
+        stringStatus = "400 Bad Request";
+        break;
+      case 500:
+        stringStatus = "500 Server Error";
+        break;
+      case 304:
+        stringStatus = "304 Not Modified";
+        break;
+      default:
+        throw new IllegalArgumentException();
+
+    }
     this.code = code;
   }
 
