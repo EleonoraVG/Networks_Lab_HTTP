@@ -9,9 +9,9 @@ public class ConnectionListener implements Runnable {
   ServerSocket serverSocket;
   ExecutorService threadPool;
 
-  public ConnectionListener(ServerSocket socket, ExecutorService requestHandlers,ExecutorService threadPool) {
+  public ConnectionListener(ServerSocket socket, ExecutorService threadPool) {
     this.serverSocket = socket;
-    this.threadPool = requestHandlers;
+    this.threadPool = threadPool;
   }
 
   public void run() {
@@ -20,7 +20,7 @@ public class ConnectionListener implements Runnable {
       while (!serverSocket.isClosed()) {
         //Wait until the client requests a connection then accept returns a new Socket that is bound to the client
         // The server can communicate over the new clientSocket to the client.
-        threadPool.execute(new RequestHandler(serverSocket.accept(),threadPool));
+        threadPool.execute(new RequestHandler(serverSocket.accept(), threadPool));
       }
     } catch (IOException e) {
       System.out.println(e.getMessage());

@@ -27,6 +27,7 @@ public class ChatServer {
     serverSocket = HTTPReader.startServerSocket(hostAddress, 80);
 
     // Create a thread pool
+    // The thread pool will receive tasks asynchronously from other threads.
     ExecutorService threadPool = Executors.newFixedThreadPool(defaultThreadPoolSize);
 
     // Collect the connections from the connectionListener
@@ -42,13 +43,12 @@ public class ChatServer {
     //TODO: Create ServiceResponseCreators. (Maybe dont create new threads for this?)
     // And alternatively process the request in the requestHandler. ??
 
-    requestRespondersThreadPool.execute(new RequestResponder());
 
     //TODO don't forget to close the datastreams in all the threads.
 
-    // Shut down executor Services
-    requestHandlersThreadPool.shutdown();
-    requestRespondersThreadPool.shutdown();
+    // Shut down the thread pool
+    threadPool.shutdown();
+
   }
 
 }
