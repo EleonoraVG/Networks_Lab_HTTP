@@ -3,7 +3,7 @@ import Objects.HTTPVersion;
 import com.google.common.base.Preconditions;
 import org.apache.commons.cli.*;
 
-public class Program {
+public class ChatClientProgram {
 
   public static void main(String[] args) throws Exception {
     // The client needs at least 3 arguments.
