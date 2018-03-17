@@ -1,5 +1,5 @@
 import Helpers.FileProcessor;
-import Helpers.HTTPHelper;
+import Helpers.HTTPReader;
 import Helpers.HtmlProcessor;
 import Objects.HTTPCommand;
 import Objects.HTTPVersion;
@@ -12,14 +12,10 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static Helpers.HTTPHelper.readOneLine;
-import static Helpers.HTTPHelper.startConnectionSocket;
+import static Helpers.HTTPReader.*;
 
 //TODO: Beautify
 
@@ -134,7 +130,7 @@ public class ChatClient {
     outToServer.flush();
 
     // Process the header
-    ServerResponse.ResponseHeader responseHeader = HTTPHelper.readHeader(inFromServer);
+    ServerResponse.ResponseHeader responseHeader = readResponseHeader(inFromServer);
 
     if (responseHeader.getStatusCode().getCode() == 100) {
       // Retry the command.
@@ -163,7 +159,7 @@ public class ChatClient {
     } else {
 
       // Use in case of HTTP/1.0
-      byte[] line = HTTPHelper.readOneLine(inFromServer);
+      byte[] line = HTTPReader.readOneLine(inFromServer);
       while (line != null && line.length != 0) {
         contentBytesStream.write(line);
         line = readOneLine(inFromServer);
@@ -187,49 +183,9 @@ public class ChatClient {
     return new ServerResponse(responseHeader, contentBytesStream.toByteArray());
   }
 
-  /**
-   * Read in one chunk in from the server.
-   *
-   * @param inFromServer
-   * @return A byte array containing he contents of the chunk.
-   * @throws IOException
-   */
-  private byte[] readChunkFromServer(DataInputStream inFromServer, Charset charset) throws IOException {
-
-    // Read the first line
-    byte[] firstLineBytes = readOneLine(inFromServer);
-    String firstLine = new String(firstLineBytes, charset);
-    String lengthString = firstLine.split(";")[0].trim();
-
-    // Sometimes the first response is an empty string.
-    if (firstLine.equals("")) {
-      byte[] num = readOneLine(inFromServer);
-      firstLine = new String(num, charset);
-      lengthString = firstLine.split(";")[0].trim();
-    }
-
-    // Retrieve the message length.
-    int messageLength = Integer.parseInt(lengthString, 16);
-
-    // Read the content of the chunk from the server.
-    byte[] result = new byte[messageLength];
-    inFromServer.readFully(result);
-
-    return result;
-  }
-
-  /**
-   * Process the content of a response when given the content length.
-   *
-   * @param inFromServer
-   * @param contentLength
-   * @return
-   * @throws IOException
-   */
-  private byte[] processWithContentLength(DataInputStream inFromServer, int contentLength) throws IOException {
-    byte[] result = new byte[contentLength];
-    inFromServer.readFully(result);
-    return result;
+  public static ServerResponse.ResponseHeader readResponseHeader(DataInputStream inFromServer) throws IOException {
+    List<String> headerStrings = readHeader(inFromServer);
+    return new ServerResponse.ResponseHeader(headerStrings);
   }
 
   /**
@@ -255,7 +211,7 @@ public class ChatClient {
         System.out.println("Write content: ");
         String input = inFromUser.readLine();
         inFromUser.close();
-        result += CR.toString()  +LF.toString()+ "Content-Length:" + SPACE + input.trim().length()+CR.toString()+LF.toString() +CR.toString() +LF.toString()+input;
+        result += CR.toString() + LF.toString() + "Content-Length:" + SPACE + input.trim().length() + CR.toString() + LF.toString() + CR.toString() + LF.toString() + input;
       } catch (IOException e) {
         System.out.println("Error while reading user input");
         throw e;
@@ -264,6 +220,20 @@ public class ChatClient {
     }
     result += CR.toString() + LF.toString() + CR.toString() + LF.toString();
     return result;
+  }
+
+  /**
+   * Create a stream socket and connect to the specified port number at the ip address.
+   *
+   * @throws IOException Thrown if error occurred during socket creation.
+   */
+  public static Socket startConnectionSocket(InetAddress ipAddress, int port) throws IOException {
+    try {
+      return new Socket(ipAddress, port);
+    } catch (IOException e) {
+      System.out.println("Something went wrong in creating and connecting the socket.");
+      throw e;
+    }
   }
 
   /**

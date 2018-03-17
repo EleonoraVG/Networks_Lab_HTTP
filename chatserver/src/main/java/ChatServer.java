@@ -1,4 +1,4 @@
-import Helpers.HTTPHelper;
+import Helpers.HTTPReader;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -18,7 +18,7 @@ public class ChatServer {
 
   private ChatServer() throws IOException{
     hostAddress = Inet4Address.getLocalHost();
-    serverSocket = HTTPHelper.startServerSocket(hostAddress, 80);
+    serverSocket = HTTPReader.startServerSocket(hostAddress, 80);
 
     //Wait until the client requests a connection and accept returns a new Socket that is bound to the client
     // The server can communicate over the new clientSocket to the client.

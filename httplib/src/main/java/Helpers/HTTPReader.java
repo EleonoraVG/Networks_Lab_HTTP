@@ -1,55 +1,87 @@
 package Helpers;
 
-import Objects.ServerResponse.ResponseHeader;
+import Objects.RequestHeader;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.ServerSocket;
-import java.net.Socket;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 //TODO: Comments
-public abstract class HTTPHelper {
+public abstract class HTTPReader {
   private static final Character CR = '\r';
   private static final Character LF = '\n';
 
-  /**
-   * Create a stream socket and connect to the specified port number at the ip address.
-   *
-   * @throws IOException Thrown if error occurred during socket creation.
-   */
-  public static Socket startConnectionSocket(InetAddress ipAddress, int port) throws IOException {
-    try {
-      return new Socket(ipAddress, port);
-    } catch (IOException e) {
-      System.out.println("Something went wrong in creating and connecting the socket.");
-      throw e;
-    }
-  }
 
   public static ServerSocket startServerSocket(InetAddress ipAddress, int port) throws IOException {
     int backlog = 50;  // The maximum queue length for incomming connection indications.
     return new ServerSocket(port, backlog, ipAddress);
   }
 
-  public static ResponseHeader readHeader(DataInputStream inFromServer) throws IOException {
+
+
+
+  public static List<String> readHeader(DataInputStream inputStream) throws IOException {
     List<String> headerStrings = new ArrayList<>();
     boolean headerDone = false;
     while (!headerDone) {
-      byte[] line = readOneLine(inFromServer);
+      byte[] line = readOneLine(inputStream);
       if (line.length == 0) {
         headerDone = true;
       }
       headerStrings.add(new String(line, StandardCharsets.UTF_8));
     }
+    return headerStrings;
+  }
 
-    //Build the response header of the server response.
-    return new ResponseHeader(headerStrings);
+  /**
+   * Read in one chunk in from the server.
+   *
+   * @param inputStream
+   * @return A byte array containing he contents of the chunk.
+   * @throws IOException
+   */
+  public static byte[] readChunkFromServer(DataInputStream inputStream, Charset charset) throws IOException {
+
+    // Read the first line
+    byte[] firstLineBytes = readOneLine(inputStream);
+    String firstLine = new String(firstLineBytes, charset);
+    String lengthString = firstLine.split(";")[0].trim();
+
+    // Sometimes the first response is an empty string.
+    if (firstLine.equals("")) {
+      byte[] num = readOneLine(inputStream);
+      firstLine = new String(num, charset);
+      lengthString = firstLine.split(";")[0].trim();
+    }
+
+    // Retrieve the message length.
+    int messageLength = Integer.parseInt(lengthString, 16);
+
+    // Read the content of the chunk from the server.
+    byte[] result = new byte[messageLength];
+    inputStream.readFully(result);
+
+    return result;
+  }
+
+  /**
+   * Process the content of a response when given the content length.
+   *
+   * @param inputStream
+   * @param contentLength
+   * @return
+   * @throws IOException
+   */
+  public static byte[] processWithContentLength(DataInputStream inputStream, int contentLength) throws IOException {
+    byte[] result = new byte[contentLength];
+    inputStream.readFully(result);
+    return result;
   }
 
   /**
