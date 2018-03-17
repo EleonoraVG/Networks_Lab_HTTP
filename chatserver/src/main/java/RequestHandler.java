@@ -1,12 +1,14 @@
 import Helpers.HTTPReader;
-import Objects.ClientRequest;
-import Objects.RequestHeader;
+import Objects.*;
 
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.Charset;
-import java.util.concurrent.BlockingQueue;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 
 import static Helpers.HTTPReader.readHeader;
@@ -16,6 +18,10 @@ import static Helpers.HTTPReader.readHeader;
  * Callable is used because it supports a return value.
  */
 public class RequestHandler implements Runnable {
+
+  private static final Character CR = '\r';
+  private static final Character LF = '\n';
+  private static final String SPACE = " ";
 
   private Socket clientSocket;
   private ExecutorService threadPool;
@@ -27,27 +33,48 @@ public class RequestHandler implements Runnable {
 
   public void run() {
     try {
-      // Process the request header and add to the resultQueue.
+      // Process the request header and schedule responding
 
       DataInputStream inFromClient = new DataInputStream(clientSocket.getInputStream());
       ClientRequest.Builder requestBuilder = ClientRequest.newBuilder();
       RequestHeader header = readRequestHeader(inFromClient);
       requestBuilder.setRequestHeader(header);
       if (header.RequestHasMessageBody()) {
-        requestBuilder.setContent(retrieveContent(header, inFromClient));
+        requestBuilder.setContent(retrieveContentInHeader(header, inFromClient));
       }
-      ClientRequestWithSocket result = new ClientRequestWithSocket(requestBuilder.build(), clientSocket);
+      ClientRequest request = requestBuilder.build();
 
       // Let the threadPool execute a requestResponder
       //TODO: fuctionality.
-      threadPool.execute(new RequestResponder());
+      threadPool.execute(new RequestResponder(createResponse(request), request, clientSocket, threadPool));
 
     } catch (IOException e) {
       System.out.println(e.getMessage());
     }
   }
 
-  private byte[] retrieveContent(RequestHeader header, DataInputStream inFromClient) throws IOException {
+  private ServerResponse createResponse(ClientRequest clientRequest) {
+    try {
+      List<String> result = new ArrayList<String>();
+      if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.GET) {
+        //TODO: Reason phrase (optional)
+        result.add(StatusCode.STATUS_CODE_200.toString() + SPACE + clientRequest.getRequestHeader().getVersion().toString() + CR.toString() + LF.toString());
+      }
+      ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(result);
+      return new ServerResponse(responseHeader, retrieveContentFromFile(clientRequest.getRequestHeader().getPath()));
+
+    } catch (IOException e) {
+      System.out.println(e.getMessage());
+    }
+    //TODO: Handle exceptions!!!!
+    return null;
+  }
+
+  private byte[] retrieveContentFromFile(String path) throws IOException {
+    return Files.readAllBytes(Paths.get(path));
+  }
+
+  private byte[] retrieveContentInHeader(RequestHeader header, DataInputStream inFromClient) throws IOException {
     byte[] content = null;
     if (header.getContentLength() != null) {
       content = HTTPReader.processWithContentLength(inFromClient, header.getContentLength());

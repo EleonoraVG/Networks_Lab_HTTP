@@ -10,10 +10,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-//Use start on threads! not Run!
-//Create a new inputstream for every requestHandler!!!
-//RequestHandlers give tasks to requestListeners???
-
 public class ChatServer {
   private int defaultQueueSize = 50;
   private int defaultThreadPoolSize = 20;
@@ -21,7 +17,9 @@ public class ChatServer {
   private InetAddress hostAddress;
   private ServerSocket serverSocket;
 
-  private ChatServer() throws IOException {
+
+  //TODO BUILDER????
+  public ChatServer() throws IOException {
     //TODO: remove logic from constructor!!!
     hostAddress = Inet4Address.getLocalHost();
     serverSocket = HTTPReader.startServerSocket(hostAddress, 80);
@@ -42,7 +40,7 @@ public class ChatServer {
     // And alternatively process the request in the requestHandler. ??
 
 
-    //TODO don't forget to close the datastreams in all the threads.
+    //TODO don't forget to close the datastreams in all threads.
 
     // Shut down the thread pool
     threadPool.shutdown();

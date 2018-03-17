@@ -24,12 +24,16 @@ public class ServerResponse {
     return content;
   }
 
+  public HTTPVersion getHTTPVersion() {
+    return responseHeader.version;
+  }
+
   public boolean isText() {
     return responseHeader.getContentType().isText();
   }
 
   public boolean isImage() {
-    if (responseHeader.getContentType() == null){
+    if (responseHeader.getContentType() == null) {
       return false;
     }
     return responseHeader.getContentType().isImage();
@@ -54,7 +58,7 @@ public class ServerResponse {
     private ContentType contentType = null;
     private String transferEncoding = null;
     private String headerText = null;
-
+    private HTTPVersion version = null;
 
     public ResponseHeader(List<String> headerTextList) {
       StringBuilder headerTextBuilder = new StringBuilder();
@@ -65,8 +69,15 @@ public class ServerResponse {
         headerTextBuilder.append(line + '\n');
 
         // extract information from the line.
-        if (Pattern.matches("HTTP/.*",line)){
+        if (Pattern.matches("HTTP/.*", line)) {
           statusCode = StatusCode.getStatusCodeForInt(Integer.parseInt(line.split(" ")[1]));
+          String[] elements = line.split(" ");
+          String httpVersionLine = elements[1].trim();
+          if (httpVersionLine.equals(HTTPVersion.HTTP_1_0.toString())) {
+            version = HTTPVersion.HTTP_1_0;
+          } else {
+            version = HTTPVersion.HTTP_1_1;
+          }
         }
         if (Pattern.matches("Transfer-Encoding:.*", line)) {
           transferEncoding = line.split(":")[1].trim();
@@ -131,6 +142,9 @@ public class ServerResponse {
         return textType;
       }
 
+      public HTTPVersion getHttpVersion() {
+        return version;
+      }
     }
 
     public String getConnectionField() {

@@ -1,29 +1,42 @@
+import Objects.ClientRequest;
 import Objects.HTTPVersion;
+import Objects.ServerResponse;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.concurrent.BlockingQueue;
+import java.net.Socket;
+import java.util.concurrent.ExecutorService;
 
 public class RequestResponder implements Runnable {
 
-  BlockingQueue<ClientRequestWithSocket> inputQueue;
+  ServerResponse serverResponse;
+  Socket clientSocket;
+  ClientRequest clientRequest;
+  ExecutorService threadPool;
+
+  public RequestResponder(ServerResponse serverResponse, ClientRequest clientRequest, Socket socket, ExecutorService threadPool) {
+    this.serverResponse = serverResponse;
+    clientSocket = socket;
+    this.clientRequest = clientRequest;
+    this.threadPool = threadPool;
+  }
 
   public void run() {
     try {
 
-      // Retrieve an element from the inputQueue.
-      ClientRequestWithSocket requestWithSocket = inputQueue.poll();
-
       // Create a new outputStream to the client socket
-      DataOutputStream outputStream = new DataOutputStream(requestWithSocket.getClientSocket().getOutputStream());
+      DataOutputStream outputStream = new DataOutputStream(clientSocket.getOutputStream());
 
+      outputStream.writeBytes(serverResponse.getResponseHeader().getHeaderText());
+      outputStream.write(serverResponse.getContent());
       //TODO: Write the headerResponse
 
       //Close the connection if HTTP/1.0
-      if (requestWithSocket.getClientRequest().getRequestHeader().getVersion().equals(HTTPVersion.HTTP_1_0) || requestWithSocket.getClientRequest().getRequestHeader().isConnectionClose())
-      requestWithSocket.getClientSocket().close();
+      if (clientRequest.getRequestHeader().getVersion().equals(HTTPVersion.HTTP_1_0) || clientRequest.getRequestHeader().isConnectionClose())
+        clientSocket.close();
       else {
-        // Add the socket back to the sockets queue.
+        // Wait for more requests from the socket.
+        threadPool.execute(new RequestHandler(clientSocket, threadPool));
       }
 
     } catch (IOException e) {
