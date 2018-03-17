@@ -79,6 +79,6 @@ public class RequestHeader {
   }
 
   public boolean isConnectionClose() {
-    return shouldConnectionClose;
+    return connectionClose;
   }
 }
