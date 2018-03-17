@@ -28,7 +28,7 @@ public class RequestHeader {
       if (Pattern.matches(".*HTTP/.*", line)) {
         String[] elements = line.split(" ");
         command = HTTPCommand.fromString(elements[0].trim());
-        path = elements[1].substring(1,elements[1].length()).trim();
+        path = elements[1].trim();
         System.out.println(path);
         String httpVersionLine = elements[2].trim();
         if (httpVersionLine.equals(HTTPVersion.HTTP_1_0.toString())) {
