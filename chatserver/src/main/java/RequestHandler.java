@@ -56,16 +56,27 @@ public class RequestHandler implements Runnable {
   private ServerResponse createResponse(ClientRequest clientRequest) {
     try {
       List<String> result = new ArrayList<String>();
+      result.add(StatusCode.STATUS_CODE_200.toString() + SPACE + clientRequest.getRequestHeader().getVersion().toString() + CR.toString() + LF.toString());
       if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.GET) {
+        System.out.println("Get command.");
         //TODO: Reason phrase (optional)
-        result.add(StatusCode.STATUS_CODE_200.toString() + SPACE + clientRequest.getRequestHeader().getVersion().toString() + CR.toString() + LF.toString());
-      }
-      ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(result);
-      return new ServerResponse(responseHeader, retrieveContentFromFile(clientRequest.getRequestHeader().getPath()));
 
+        ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(result);
+        System.out.println(responseHeader.getHeaderText());
+        result.add(CR.toString()+LF.toString());
+        System.out.println("get executes");
+        return new ServerResponse(responseHeader, retrieveContentFromFile(clientRequest.getRequestHeader().getPath()));
+      } else {
+        System.out.println("clientRequest: " + clientRequest.getRequestHeader().getRequestText());
+        System.out.println("Not a get request");
+        return new ServerResponse(new ServerResponse.ResponseHeader(result),new byte[]{});
+      }
     } catch (IOException e) {
+      System.out.println("IOExceptionThrown.");
+      System.out.println("404 Page Not Found.");
       System.out.println(e.getMessage());
     }
+
     //TODO: Handle exceptions!!!!
     return null;
   }

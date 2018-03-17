@@ -12,6 +12,7 @@ public class RequestHeader {
   private String transferEncoding = null;
   boolean connectionClose = false;
   String host;
+  String requestText;
 
 
   public boolean RequestHasMessageBody() {
@@ -27,7 +28,8 @@ public class RequestHeader {
       if (Pattern.matches(".*HTTP/.*", line)) {
         String[] elements = line.split(" ");
         command = HTTPCommand.fromString(elements[0].trim());
-        path = elements[1].trim();
+        path = elements[1].substring(1,elements[1].length()).trim();
+        System.out.println(path);
         String httpVersionLine = elements[2].trim();
         if (httpVersionLine.equals(HTTPVersion.HTTP_1_0.toString())) {
           version = HTTPVersion.HTTP_1_0;
@@ -48,6 +50,9 @@ public class RequestHeader {
         }
       }
     }
+    StringBuilder builder = new StringBuilder();
+    requestText.forEach(x -> builder.append(x));
+    this.requestText = builder.toString();
   }
 
   public HTTPVersion getVersion() {
@@ -80,5 +85,9 @@ public class RequestHeader {
 
   public boolean isConnectionClose() {
     return connectionClose;
+  }
+
+  public String getRequestText() {
+    return requestText;
   }
 }

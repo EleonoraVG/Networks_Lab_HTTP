@@ -43,6 +43,6 @@ public class ChatServer {
     //TODO don't forget to close the datastreams in all threads.
 
     // Shut down the thread pool
-    threadPool.shutdown();
+    //threadPool.shutdown();
   }
 }

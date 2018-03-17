@@ -25,7 +25,10 @@ public class RequestResponder implements Runnable {
     try {
 
       // Create a new outputStream to the client socket
+      System.out.println(clientSocket.getOutputStream());
+      System.out.println(serverResponse.getResponseHeader().getHeaderText());
       DataOutputStream outputStream = new DataOutputStream(clientSocket.getOutputStream());
+
 
       outputStream.writeBytes(serverResponse.getResponseHeader().getHeaderText());
       outputStream.write(serverResponse.getContent());
