@@ -10,12 +10,14 @@ public class RequestHeader {
   Integer contentLength;
   String contentType;
   private String transferEncoding = null;
+  boolean shouldConnectionClose = false;
   String host;
 
-  // The presence of a message-body in a request is signaled by the
-  //   inclusion of a Content-Length or Transfer-Encoding header field in
-  //   the request's message-headers.
+
   public boolean RequestHasMessageBody() {
+    // The presence of a message-body in a request is signaled by the
+    // inclusion of a Content-Length or Transfer-Encoding header field in
+    // the request's message-headers.
     return (contentLength != null || transferEncoding != null);
   }
 
@@ -38,6 +40,12 @@ public class RequestHeader {
         contentLength = Integer.parseInt(line.split(":")[1].trim());
       } else if (Pattern.matches("content-type", line.toLowerCase())) {
         contentType = line.split(":")[1].trim();
+      } else if (Pattern.matches("transfer-encoding:.*", line.toLowerCase())) {
+        transferEncoding = line.split(":")[1].trim();
+      } else if (Pattern.matches("connection:.*", line.toLowerCase())) {
+        if (line.split(":")[1].trim().toLowerCase().equals("close")) {
+          shouldConnectionClose = true;
+        }
       }
     }
   }
@@ -68,5 +76,9 @@ public class RequestHeader {
 
   public String getHost() {
     return host;
+  }
+
+  public boolean isShouldConnectionClose() {
+    return shouldConnectionClose;
   }
 }

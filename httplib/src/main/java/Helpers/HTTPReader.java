@@ -1,6 +1,7 @@
 package Helpers;
 
 import Objects.RequestHeader;
+import Objects.ServerResponse.ResponseHeader;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -23,8 +24,14 @@ public abstract class HTTPReader {
     return new ServerSocket(port, backlog, ipAddress);
   }
 
+  public static ResponseHeader readServerResponseHeader(DataInputStream inFromServer) throws IOException {
+    List<String> headerStrings = readHeader(inFromServer);
+    return new ResponseHeader(headerStrings);
+  }
 
-
+  public static RequestHeader readClientRequestHeader(DataInputStream inFromClient) throws IOException {
+    return new RequestHeader(readHeader(inFromClient));
+  }
 
   public static List<String> readHeader(DataInputStream inputStream) throws IOException {
     List<String> headerStrings = new ArrayList<>();
@@ -42,20 +49,20 @@ public abstract class HTTPReader {
   /**
    * Read in one chunk in from the server.
    *
-   * @param inputStream
+   * @param inFromServer
    * @return A byte array containing he contents of the chunk.
    * @throws IOException
    */
-  public static byte[] readChunkFromServer(DataInputStream inputStream, Charset charset) throws IOException {
+  public static byte[] readChunkFromServer(DataInputStream inFromServer, Charset charset) throws IOException {
 
     // Read the first line
-    byte[] firstLineBytes = readOneLine(inputStream);
+    byte[] firstLineBytes = readOneLine(inFromServer);
     String firstLine = new String(firstLineBytes, charset);
     String lengthString = firstLine.split(";")[0].trim();
 
     // Sometimes the first response is an empty string.
     if (firstLine.equals("")) {
-      byte[] num = readOneLine(inputStream);
+      byte[] num = readOneLine(inFromServer);
       firstLine = new String(num, charset);
       lengthString = firstLine.split(";")[0].trim();
     }
@@ -65,7 +72,7 @@ public abstract class HTTPReader {
 
     // Read the content of the chunk from the server.
     byte[] result = new byte[messageLength];
-    inputStream.readFully(result);
+    inFromServer.readFully(result);
 
     return result;
   }
@@ -73,14 +80,14 @@ public abstract class HTTPReader {
   /**
    * Process the content of a response when given the content length.
    *
-   * @param inputStream
+   * @param inFromServer
    * @param contentLength
    * @return
    * @throws IOException
    */
-  public static byte[] processWithContentLength(DataInputStream inputStream, int contentLength) throws IOException {
+  public static byte[] processWithContentLength(DataInputStream inFromServer, int contentLength) throws IOException {
     byte[] result = new byte[contentLength];
-    inputStream.readFully(result);
+    inFromServer.readFully(result);
     return result;
   }
 

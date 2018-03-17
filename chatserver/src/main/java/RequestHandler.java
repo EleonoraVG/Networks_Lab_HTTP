@@ -1,12 +1,12 @@
 import Helpers.HTTPReader;
 import Objects.ClientRequest;
 import Objects.RequestHeader;
-import com.google.common.base.Preconditions;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.net.Socket;
 import java.nio.charset.Charset;
-import java.util.concurrent.Callable;
+import java.util.concurrent.BlockingQueue;
 
 import static Helpers.HTTPReader.readHeader;
 
@@ -14,23 +14,38 @@ import static Helpers.HTTPReader.readHeader;
  * A callable for handling incoming requests to the server.
  * Callable is used because it supports a return value.
  */
-public class RequestHandler implements Callable<ClientRequest> {
+//TODO: make runnable (no return value)
+public class RequestHandler implements Runnable {
 
-  private DataInputStream inFromClient;
+  //The queue to take input from
+  private BlockingQueue<Socket> clientSockets;
+  private BlockingQueue<ClientRequestWithSocket> outputQueue;
 
-  public ClientRequest call() throws Exception {
-    // TODO: Separate threads for handling requests and responding?
-    Preconditions.checkNotNull(inFromClient);
-    ClientRequest.Builder requestBuilder = ClientRequest.newBuilder();
-    RequestHeader header = readRequestHeader(inFromClient);
-    requestBuilder.setRequestHeader(header);
-    if (header.RequestHasMessageBody()) {
-      requestBuilder.setContent(retrieveContent(header));
-    }
-    return requestBuilder.build();
+  public RequestHandler(BlockingQueue<Socket> clientSockets, BlockingQueue<ClientRequestWithSocket> outputQueue) {
+    this.clientSockets = clientSockets;
+    this.outputQueue = outputQueue;
   }
 
-  private byte[] retrieveContent(RequestHeader header) throws IOException {
+  public void run() {
+    try {
+      // Process the request heder and add to the resultQueue.
+
+      Socket clientSocket = clientSockets.poll();
+      DataInputStream inFromClient = new DataInputStream(clientSocket.getInputStream());
+      ClientRequest.Builder requestBuilder = ClientRequest.newBuilder();
+      RequestHeader header = readRequestHeader(inFromClient);
+      requestBuilder.setRequestHeader(header);
+      if (header.RequestHasMessageBody()) {
+        requestBuilder.setContent(retrieveContent(header, inFromClient));
+      }
+      ClientRequestWithSocket result = new ClientRequestWithSocket(requestBuilder.build(), clientSocket);
+      outputQueue.add(result);
+    } catch (IOException e) {
+      System.out.println(e.getMessage());
+    }
+  }
+
+  private byte[] retrieveContent(RequestHeader header, DataInputStream inFromClient) throws IOException {
     byte[] content = null;
     if (header.getContentLength() != null) {
       content = HTTPReader.processWithContentLength(inFromClient, header.getContentLength());
@@ -43,13 +58,5 @@ public class RequestHandler implements Callable<ClientRequest> {
 
   public static RequestHeader readRequestHeader(DataInputStream inFromClient) throws IOException {
     return new RequestHeader(readHeader(inFromClient));
-  }
-
-  public DataInputStream getInputStream() {
-    return inFromClient;
-  }
-
-  public void setInputStream(DataInputStream inFromClient) {
-    this.inFromClient = inFromClient;
   }
 }

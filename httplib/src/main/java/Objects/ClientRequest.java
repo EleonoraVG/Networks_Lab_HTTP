@@ -12,6 +12,14 @@ public class ClientRequest {
   private ClientRequest() {
   }
 
+  public RequestHeader getRequestHeader() {
+    return requestHeader;
+  }
+
+  public byte[] getContent() {
+    return content;
+  }
+
   public static ClientRequest.Builder newBuilder() {
     return new Builder();
   }

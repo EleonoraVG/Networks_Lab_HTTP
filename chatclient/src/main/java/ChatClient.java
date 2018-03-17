@@ -130,7 +130,7 @@ public class ChatClient {
     outToServer.flush();
 
     // Process the header
-    ServerResponse.ResponseHeader responseHeader = readResponseHeader(inFromServer);
+    ServerResponse.ResponseHeader responseHeader = HTTPReader.readServerResponseHeader(inFromServer);
 
     if (responseHeader.getStatusCode().getCode() == 100) {
       // Retry the command.
@@ -145,7 +145,7 @@ public class ChatClient {
     if (responseHeader.getTransferEncoding() != null && responseHeader.getTransferEncoding().equals("chunked")) {
 
       // Process chunks.
-      response = readChunkFromServer(inFromServer, responseHeader.getCharSet());
+      response = HTTPReader.readChunkFromServer(inFromServer, responseHeader.getCharSet());
       while (response.length != 0) {
         contentBytesStream.write(response);
         response = readChunkFromServer(inFromServer, responseHeader.getCharSet());
@@ -182,12 +182,10 @@ public class ChatClient {
     }
     return new ServerResponse(responseHeader, contentBytesStream.toByteArray());
   }
-
-  public static ServerResponse.ResponseHeader readResponseHeader(DataInputStream inFromServer) throws IOException {
+public static ServerResponse.ResponseHeader readServerResponseHeader(DataInputStream inFromServer) throws IOException {
     List<String> headerStrings = readHeader(inFromServer);
     return new ServerResponse.ResponseHeader(headerStrings);
   }
-
   /**
    * Create the HTTP command string that will be send to the Server.
    *
