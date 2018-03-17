@@ -1,4 +1,5 @@
 import Helpers.FileProcessor;
+import Helpers.HTTPHelper;
 import Helpers.HtmlProcessor;
 import Objects.HTTPCommand;
 import Objects.HTTPVersion;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static Helpers.HTTPHelper.readOneLine;
 import static Helpers.HTTPHelper.startConnectionSocket;
 
 //TODO: Beautify
@@ -132,18 +134,7 @@ public class ChatClient {
     outToServer.flush();
 
     // Process the header
-    List<String> headerStrings = new ArrayList<>();
-    boolean headerDone = false;
-    while (!headerDone) {
-      byte[] line = readOneLine(inFromServer);
-      if (line.length == 0) {
-        headerDone = true;
-      }
-      headerStrings.add(new String(line, StandardCharsets.UTF_8));
-    }
-
-    //Build the response header of the server response.
-    ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+    ServerResponse.ResponseHeader responseHeader = HTTPHelper.readHeader(inFromServer);
 
     if (responseHeader.getStatusCode().getCode() == 100) {
       // Retry the command.
@@ -172,7 +163,7 @@ public class ChatClient {
     } else {
 
       // Use in case of HTTP/1.0
-      byte[] line = readOneLine(inFromServer);
+      byte[] line = HTTPHelper.readOneLine(inFromServer);
       while (line != null && line.length != 0) {
         contentBytesStream.write(line);
         line = readOneLine(inFromServer);
@@ -194,41 +185,6 @@ public class ChatClient {
       closeConnection();
     }
     return new ServerResponse(responseHeader, contentBytesStream.toByteArray());
-  }
-
-  /**
-   * Read bytes from the server until the end of a line.
-   *
-   * @param inFromServer
-   * @return a byte array containing the bytes of one line.
-   * @throws IOException
-   */
-  private byte[] readOneLine(DataInputStream inFromServer) throws IOException {
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    int i;
-    while ((i = inFromServer.read()) != -1) {
-
-      // Check for the end of a line.
-      boolean lineEnded = false;
-      if (i == CR) {
-        int nextChar = inFromServer.read();
-        if (nextChar == LF) {
-          lineEnded = true;
-        }
-      } else if (i == LF) {
-        lineEnded = true;
-      }
-
-      // Break if the line ended.
-      if (lineEnded) {
-        break;
-      }
-      // Write to the byteArrayOutputSteam otherwise.
-      byteArrayOutputStream.write(i);
-    }
-    byteArrayOutputStream.flush();
-    byteArrayOutputStream.close();
-    return byteArrayOutputStream.toByteArray();
   }
 
   /**

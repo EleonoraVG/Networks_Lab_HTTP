@@ -3,7 +3,7 @@ package Objects;
 import java.util.List;
 import java.util.regex.Pattern;
 
-public class HTTPRequest {
+public class ClientRequest {
   HTTPVersion version;
   HTTPCommand command;
   String path;
@@ -11,7 +11,7 @@ public class HTTPRequest {
   String contentType;
   String host;
 
-  public HTTPRequest(List<String> requestText) {
+  public ClientRequest(List<String> requestText) {
     // Parse the lines
     for (String line : requestText) {
       if (Pattern.matches(".*HTTP/.*", line)) {
