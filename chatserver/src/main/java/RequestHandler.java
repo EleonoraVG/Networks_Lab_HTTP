@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
 
 import static Helpers.HTTPReader.readHeader;
 
@@ -14,23 +15,20 @@ import static Helpers.HTTPReader.readHeader;
  * A callable for handling incoming requests to the server.
  * Callable is used because it supports a return value.
  */
-//TODO: make runnable (no return value)
 public class RequestHandler implements Runnable {
 
-  //The queue to take input from
-  private BlockingQueue<Socket> clientSockets;
-  private BlockingQueue<ClientRequestWithSocket> outputQueue;
+  private Socket clientSocket;
+  private ExecutorService threadPool;
 
-  public RequestHandler(BlockingQueue<Socket> clientSockets, BlockingQueue<ClientRequestWithSocket> outputQueue) {
-    this.clientSockets = clientSockets;
-    this.outputQueue = outputQueue;
+  public RequestHandler(Socket clientSocket, ExecutorService threadPool) {
+    this.clientSocket = clientSocket;
+    this.threadPool = threadPool;
   }
 
   public void run() {
     try {
-      // Process the request heder and add to the resultQueue.
+      // Process the request header and add to the resultQueue.
 
-      Socket clientSocket = clientSockets.poll();
       DataInputStream inFromClient = new DataInputStream(clientSocket.getInputStream());
       ClientRequest.Builder requestBuilder = ClientRequest.newBuilder();
       RequestHeader header = readRequestHeader(inFromClient);
@@ -39,7 +37,11 @@ public class RequestHandler implements Runnable {
         requestBuilder.setContent(retrieveContent(header, inFromClient));
       }
       ClientRequestWithSocket result = new ClientRequestWithSocket(requestBuilder.build(), clientSocket);
-      outputQueue.add(result);
+
+      // Let the threadPool execute a requestResponder
+      //TODO: fuctionality.
+      threadPool.execute(new RequestResponder());
+
     } catch (IOException e) {
       System.out.println(e.getMessage());
     }

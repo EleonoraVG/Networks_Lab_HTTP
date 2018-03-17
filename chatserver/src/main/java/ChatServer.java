@@ -16,7 +16,7 @@ import java.util.concurrent.Executors;
 
 public class ChatServer {
   private int defaultQueueSize = 50;
-  private int defaultThreadPoolSize = 10;
+  private int defaultThreadPoolSize = 20;
   private int port = 80;
   private InetAddress hostAddress;
   private ServerSocket serverSocket;
@@ -26,25 +26,29 @@ public class ChatServer {
     hostAddress = Inet4Address.getLocalHost();
     serverSocket = HTTPReader.startServerSocket(hostAddress, 80);
 
+    // Create a thread pool
+    ExecutorService threadPool = Executors.newFixedThreadPool(defaultThreadPoolSize);
+
     // Collect the connections from the connectionListener
     BlockingQueue<Socket> clientSockets = new ArrayBlockingQueue<Socket>(defaultQueueSize); //TODO: choose implementation
 
     // Start a connection listener
-    Thread connectionListener = new Thread(new ConnectionListener(serverSocket, clientSockets));
+    Thread connectionListener = new Thread(new ConnectionListener(serverSocket, threadPool));
     connectionListener.start();
 
-    //TODO: Datastructure to collect requestHeaders with their connection.
+    //collect requestHeaders with their corresponding socket.
     BlockingQueue<ClientRequestWithSocket> requestWithSockets = new ArrayBlockingQueue<ClientRequestWithSocket>(defaultQueueSize);
 
-    //Create a thread pool for requestHandlers
-    ExecutorService requestHandlersThreadPool = Executors.newFixedThreadPool(defaultThreadPoolSize);
-    requestHandlersThreadPool.execute(new RequestHandler(clientSockets,requestWithSockets));
+    //TODO: Create ServiceResponseCreators. (Maybe dont create new threads for this?)
+    // And alternatively process the request in the requestHandler. ??
 
-    // Create a thread pool for requestResponders
-    ExecutorService requestRespondersThreadPool = Executors.newFixedThreadPool(defaultThreadPoolSize);
     requestRespondersThreadPool.execute(new RequestResponder());
+
     //TODO don't forget to close the datastreams in all the threads.
 
+    // Shut down executor Services
+    requestHandlersThreadPool.shutdown();
+    requestRespondersThreadPool.shutdown();
   }
 
 }

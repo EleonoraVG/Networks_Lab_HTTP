@@ -2,18 +2,16 @@ import com.google.common.base.Preconditions;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
 
 public class ConnectionListener implements Runnable {
 
-  // Reference to the blockingQueue to write to
-  BlockingQueue<Socket> clientSockets;
   ServerSocket serverSocket;
+  ExecutorService threadPool;
 
-  public ConnectionListener(ServerSocket socket, BlockingQueue<Socket> clientSockets) {
+  public ConnectionListener(ServerSocket socket, ExecutorService requestHandlers,ExecutorService threadPool) {
     this.serverSocket = socket;
-    this.clientSockets = clientSockets;
+    this.threadPool = requestHandlers;
   }
 
   public void run() {
@@ -22,7 +20,7 @@ public class ConnectionListener implements Runnable {
       while (!serverSocket.isClosed()) {
         //Wait until the client requests a connection then accept returns a new Socket that is bound to the client
         // The server can communicate over the new clientSocket to the client.
-        clientSockets.add(serverSocket.accept());
+        threadPool.execute(new RequestHandler(serverSocket.accept(),threadPool));
       }
     } catch (IOException e) {
       System.out.println(e.getMessage());
