@@ -2,9 +2,9 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
 
-public class RequestListener implements Runnable{
+public class RequestResponder implements Runnable{
 
-  private DataInputStream inFromSocket;
+  DataOutputStream outToClient;
 
   public void run() {
 

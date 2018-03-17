@@ -45,11 +45,11 @@ public class RequestHandler implements Callable<ClientRequest> {
     return new RequestHeader(readHeader(inFromClient));
   }
 
-  public DataInputStream getInFromClient() {
+  public DataInputStream getInputStream() {
     return inFromClient;
   }
 
-  public void setInFromClient(DataInputStream inFromClient) {
+  public void setInputStream(DataInputStream inFromClient) {
     this.inFromClient = inFromClient;
   }
 }
