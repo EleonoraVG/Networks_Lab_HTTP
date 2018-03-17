@@ -34,11 +34,9 @@ public class ChatServer {
     BlockingQueue<Socket> clientSockets = new ArrayBlockingQueue<Socket>(defaultQueueSize); //TODO: choose implementation
 
     // Start a connection listener
+    // This connection listener will schedule tasks until the socket closes.
     Thread connectionListener = new Thread(new ConnectionListener(serverSocket, threadPool));
     connectionListener.start();
-
-    //collect requestHeaders with their corresponding socket.
-    BlockingQueue<ClientRequestWithSocket> requestWithSockets = new ArrayBlockingQueue<ClientRequestWithSocket>(defaultQueueSize);
 
     //TODO: Create ServiceResponseCreators. (Maybe dont create new threads for this?)
     // And alternatively process the request in the requestHandler. ??
@@ -48,7 +46,5 @@ public class ChatServer {
 
     // Shut down the thread pool
     threadPool.shutdown();
-
   }
-
 }

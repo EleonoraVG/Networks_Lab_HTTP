@@ -10,7 +10,7 @@ public class RequestHeader {
   Integer contentLength;
   String contentType;
   private String transferEncoding = null;
-  boolean shouldConnectionClose = false;
+  boolean connectionClose = false;
   String host;
 
 
@@ -44,7 +44,7 @@ public class RequestHeader {
         transferEncoding = line.split(":")[1].trim();
       } else if (Pattern.matches("connection:.*", line.toLowerCase())) {
         if (line.split(":")[1].trim().toLowerCase().equals("close")) {
-          shouldConnectionClose = true;
+          connectionClose = true;
         }
       }
     }
@@ -78,7 +78,7 @@ public class RequestHeader {
     return host;
   }
 
-  public boolean isShouldConnectionClose() {
+  public boolean isConnectionClose() {
     return shouldConnectionClose;
   }
 }

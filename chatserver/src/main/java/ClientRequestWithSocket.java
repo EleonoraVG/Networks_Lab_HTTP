@@ -19,6 +19,4 @@ public class ClientRequestWithSocket {
   public Socket getClientSocket() {
     return clientSocket;
   }
-
-
 }

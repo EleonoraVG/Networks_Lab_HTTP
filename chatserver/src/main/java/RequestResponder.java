@@ -20,7 +20,7 @@ public class RequestResponder implements Runnable {
       //TODO: Write the headerResponse
 
       //Close the connection if HTTP/1.0
-      if (requestWithSocket.getClientRequest().getRequestHeader().getVersion().equals(HTTPVersion.HTTP_1_0))
+      if (requestWithSocket.getClientRequest().getRequestHeader().getVersion().equals(HTTPVersion.HTTP_1_0) || requestWithSocket.getClientRequest().getRequestHeader().isConnectionClose())
       requestWithSocket.getClientSocket().close();
       else {
         // Add the socket back to the sockets queue.
