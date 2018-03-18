@@ -13,7 +13,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import static main.java.HTTPConstants;
+import static Constants.HTTPConstants.CR;
+import static Constants.HTTPConstants.LF;
 
 /**
  * A Helper class for reading bytes from the server,
@@ -93,7 +94,7 @@ public abstract class HTTPReader {
 
       // Check for the end of a line.
       boolean lineEnded = false;
-      if (i == HTTPConstants.CR) {
+      if (i == CR) {
         int nextChar = inFromServer.read();
         if (nextChar == LF) {
           lineEnded = true;

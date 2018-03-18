@@ -1,3 +1,5 @@
+package Constants;
+
 /**
  * Constants that are useful in dealing with HTTP requests and responses.
  */

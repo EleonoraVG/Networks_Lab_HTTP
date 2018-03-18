@@ -16,9 +16,10 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static Constants.HTTPConstants.ENDOFLINE;
+import static Constants.HTTPConstants.SPACE;
 import static Helpers.HTTPReader.*;
 import static Objects.HTTPVersion.HTTP_1_1;
-
 
 public class ChatClient {
 
@@ -60,7 +61,7 @@ public class ChatClient {
       startConnection();
       inFromServer = new DataInputStream(clientSocket.getInputStream());
       outToServer = new DataOutputStream(clientSocket.getOutputStream());
-      response = executeCommand(inFromServer, outToServer, createRequest(command, ipAddress.getHostName() + "/"));
+      response = writeCommandToServer(inFromServer, outToServer, createRequest(command, ipAddress.getHostName() + "/"));
     } else {
       // Create a new connection for every command in case of HTTP/1.0
       response = executeCommandHTTP10(createRequest(command, ipAddress.getHostName() + "/"));
@@ -93,14 +94,13 @@ public class ChatClient {
                 .filter(x -> !x.isEmpty())
                 .collect(Collectors.toList());
 
+        //Retrieve images from server.
         for (String imgLoc : imageLocations) {
-          //TODO: clean this up.
-          String commandString;
+          String commandString = createRequest(HTTPCommand.GET, imgLoc);
+
           if (HTTPVersion.equals(HTTP_1_1)) {
-            commandString = "GET" + SPACE + "http://" + ipAddress.getHostName() + "/" + imgLoc + SPACE + HTTPVersion.toString() + ENDOFLINE + "Host:" + SPACE + ipAddress.getHostName() + ENDOFLINE + ENDOFLINE;
-            response = executeCommand(inFromServer, outToServer, commandString);
+            response = writeCommandToServer(inFromServer, outToServer, commandString);
           } else {
-            commandString = "GET" + SPACE + "http://" + ipAddress.getHostName() + "/" + imgLoc + SPACE + HTTPVersion.toString() + CR.toString() + LF.toString() + CR.toString() + LF.toString();
             response = executeCommandHTTP10(commandString);
           }
 
@@ -144,7 +144,7 @@ public class ChatClient {
     DataInputStream inFromServer = new DataInputStream(clientSocket.getInputStream());
     DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
 
-    ServerResponse response = executeCommand(inFromServer, outToServer, commandString);
+    ServerResponse response = writeCommandToServer(inFromServer, outToServer, commandString);
 
     // Close the connection
     inFromServer.close();
@@ -163,7 +163,7 @@ public class ChatClient {
    * @return the response from the server
    * @throws IOException
    */
-  private ServerResponse executeCommand(DataInputStream inFromServer, DataOutputStream outToServer, String commandString) throws IOException {
+  private ServerResponse writeCommandToServer(DataInputStream inFromServer, DataOutputStream outToServer, String commandString) throws IOException {
 
     // Send request to the server
     outToServer.writeBytes(commandString);
@@ -175,7 +175,7 @@ public class ChatClient {
     if (responseHeader.getStatusCode().getCode() == 100) {
       // Retry the command.
       // Only possible with HTTP/1.1
-      executeCommand(inFromServer, outToServer, commandString);
+      writeCommandToServer(inFromServer, outToServer, commandString);
     }
 
     // Read the contents
@@ -245,7 +245,7 @@ public class ChatClient {
       result = command.toString() + SPACE + path + SPACE + HTTPVersion.toString() + ENDOFLINE;
     }
     if (HTTPVersion.equals(HTTP_1_1)) {
-      result += "Host: " + ipAddress.getHostName() + ENDOFLINE;
+      result += "Host:" + SPACE + ipAddress.getHostName() + ENDOFLINE;
     }
 
     // Read user input for the content of the POST or PUT command.

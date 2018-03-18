@@ -2,8 +2,14 @@ import com.google.common.base.Preconditions;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 
+/**
+ * Listen for a connection on the server socket.
+ * If a connection has been made add a new task to the thread pool
+ * and continue listening to the server socket.
+ */
 public class ConnectionListener implements Runnable {
 
   ServerSocket serverSocket;
@@ -17,10 +23,14 @@ public class ConnectionListener implements Runnable {
   public void run() {
     Preconditions.checkNotNull(serverSocket);
     try {
+
+      // Wait until a connection is made to the serverSocket.
       while (!serverSocket.isClosed()) {
-        //Wait until the client requests a connection then accept returns a new Socket that is bound to the client
-        // The server can communicate over the new clientSocket to the client.
-        threadPool.execute(new RequestHandler(serverSocket.accept(), threadPool));
+
+        // accept returns a new Socket that is bound to the client when a connection is made.
+        Socket clientSocket = serverSocket.accept();
+
+        threadPool.execute(new RequestHandler(clientSocket, threadPool));
       }
     } catch (IOException e) {
       System.out.println(e.getMessage());

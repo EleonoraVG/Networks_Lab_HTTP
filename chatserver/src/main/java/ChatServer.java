@@ -20,12 +20,13 @@ public class ChatServer {
   public void run() throws IOException {
     hostAddress = Inet4Address.getLocalHost();
     serverSocket = startServerSocket(hostAddress, 80);
-    // Create a thread pool
-    // The thread pool will receive tasks asynchronously from other threads.
+
+    // Create a thread pool.
+    // which will receive tasks asynchronously from other threads.
     ExecutorService threadPool = Executors.newFixedThreadPool(defaultThreadPoolSize);
 
     // Start a connection listener
-    // This connection listener will schedule tasks until the socket closes.
+    // which will schedule tasks until the socket closes.
     Thread connectionListener = new Thread(new ConnectionListener(serverSocket, threadPool));
     connectionListener.start();
 
