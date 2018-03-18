@@ -13,16 +13,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-//TODO: Comments
+import static main.java.HTTPConstants;
+
+/**
+ * A Helper class for reading bytes from the server,
+ * according to the HTTP protocol.
+ */
 public abstract class HTTPReader {
-  private static final Character CR = '\r';
-  private static final Character LF = '\n';
-
-
-  public static ServerSocket startServerSocket(InetAddress ipAddress, int port) throws IOException {
-    int backlog = 50;  // The maximum queue length for incomming connection indications.
-    return new ServerSocket(port, backlog, ipAddress);
-  }
 
   public static List<String> readHeader(DataInputStream inputStream) throws IOException {
     List<String> headerStrings = new ArrayList<>();
@@ -96,7 +93,7 @@ public abstract class HTTPReader {
 
       // Check for the end of a line.
       boolean lineEnded = false;
-      if (i == CR) {
+      if (i == HTTPConstants.CR) {
         int nextChar = inFromServer.read();
         if (nextChar == LF) {
           lineEnded = true;

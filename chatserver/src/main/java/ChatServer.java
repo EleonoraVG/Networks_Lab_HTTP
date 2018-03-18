@@ -17,9 +17,9 @@ public class ChatServer {
   private InetAddress hostAddress;
   private ServerSocket serverSocket;
 
-  public void run() throws IOException{
+  public void run() throws IOException {
     hostAddress = Inet4Address.getLocalHost();
-    serverSocket = HTTPReader.startServerSocket(hostAddress, 80);
+    serverSocket = startServerSocket(hostAddress, 80);
     // Create a thread pool
     // The thread pool will receive tasks asynchronously from other threads.
     ExecutorService threadPool = Executors.newFixedThreadPool(defaultThreadPoolSize);
@@ -32,5 +32,10 @@ public class ChatServer {
 
     // Shut down the thread pool
     //threadPool.shutdown();
+  }
+
+  public ServerSocket startServerSocket(InetAddress ipAddress, int port) throws IOException {
+    int backlog = 50;  // The maximum queue length for incoming connection indications.
+    return new ServerSocket(port, backlog, ipAddress);
   }
 }

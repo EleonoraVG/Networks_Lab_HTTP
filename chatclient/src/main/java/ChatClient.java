@@ -22,11 +22,6 @@ import static Objects.HTTPVersion.HTTP_1_1;
 
 public class ChatClient {
 
-  private static final Character CR = '\r';
-  private static final Character LF = '\n';
-  private static final String SPACE = " ";
-  private static final String ENDOFLINE = CR.toString() + LF.toString();
-
   private HTTPVersion HTTPVersion;
   private String responseDirPath;
   private int port;
