@@ -7,8 +7,11 @@ import java.net.Socket;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.*;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 
 import static Constants.HTTPConstants.ENDOFLINE;
@@ -64,9 +67,14 @@ public class RequestHandler implements Runnable {
   private ServerResponse createResponse(ClientRequest clientRequest) {
     try {
       List<String> result = new ArrayList<String>();
-      result.add(clientRequest.getRequestHeader().getVersion().toString() + SPACE + StatusCode.STATUS_CODE_200.toString());
 
-      // Process a get request
+      // add the initial response line
+      result.add(clientRequest.getRequestHeader().getVersion().toString() + SPACE + StatusCode.STATUS_CODE_200.toString());
+      // Add the date
+      result.add("Date:" + SPACE + formatDateInImfFixDate(Instant.now().atZone(ZoneId.of("GMT"))));
+
+      
+      // Process a GET request
       if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.GET) {
         byte[] content;
         //TODO: Reason phrase (optional)
@@ -94,6 +102,17 @@ public class RequestHandler implements Runnable {
 
       return new ServerResponse(new ServerResponse.ResponseHeader(header), new byte[]{});
     }
+  }
+
+  private String formatDateInImfFixDate(ZonedDateTime dateTime) {
+    return dateTime.getDayOfWeek().name() + "," + SPACE
+            + dateTime.getDayOfMonth() + SPACE
+            + dateTime.getMonth().name() + SPACE
+            + dateTime.getYear() + SPACE
+            + dateTime.getHour() + ":"
+            + dateTime.getMinute() + ":"
+            + dateTime.getSecond() + ":" + SPACE
+            + "GMT";
   }
 
   private byte[] retrieveContentFromFile(String path) throws IOException {
