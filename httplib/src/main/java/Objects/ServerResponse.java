@@ -60,13 +60,19 @@ public class ServerResponse {
     private String headerText = null;
     private HTTPVersion version = null;
 
+    //TODO: can cause errors: instead rewrite whole headertext on change!!!
+    public void setContentLength(Integer contentLength) {
+      this.contentLength = contentLength;
+      this.headerText = headerText+ "Content-Length: " + contentLength;
+    }
+
     public ResponseHeader(List<String> headerTextList) {
       StringBuilder headerTextBuilder = new StringBuilder();
 
       // Extract information from the header text.
       for (String line : headerTextList) {
         // Build the header text
-        headerTextBuilder.append(line + '\n');
+        headerTextBuilder.append(line + '\r' +'\n');
 
         // extract information from the line.
         if (Pattern.matches("HTTP/.*", line)) {
@@ -100,6 +106,7 @@ public class ServerResponse {
         }
       }
       headerText = headerTextBuilder.toString();
+
     }
 
     private class ContentType {
@@ -145,6 +152,8 @@ public class ServerResponse {
       public HTTPVersion getHttpVersion() {
         return version;
       }
+
+
     }
 
     public String getConnectionField() {

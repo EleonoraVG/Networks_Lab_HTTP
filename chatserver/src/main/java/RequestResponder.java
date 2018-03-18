@@ -32,6 +32,8 @@ public class RequestResponder implements Runnable {
 
       outputStream.writeBytes(serverResponse.getResponseHeader().getHeaderText());
       outputStream.write(serverResponse.getContent());
+      outputStream.writeByte('\r');
+      outputStream.writeByte('\n');
       //TODO: Write the headerResponse
 
       //Close the connection if HTTP/1.0
@@ -39,6 +41,8 @@ public class RequestResponder implements Runnable {
         clientSocket.close();
       else {
         // Wait for more requests from the socket.
+       //TODO: Don't close connection for HTTP/1.1
+      //  clientSocket.close();
         threadPool.execute(new RequestHandler(clientSocket, threadPool));
       }
 

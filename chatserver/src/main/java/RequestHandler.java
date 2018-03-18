@@ -56,16 +56,20 @@ public class RequestHandler implements Runnable {
   private ServerResponse createResponse(ClientRequest clientRequest) {
     try {
       List<String> result = new ArrayList<String>();
-      result.add(StatusCode.STATUS_CODE_200.toString() + SPACE + clientRequest.getRequestHeader().getVersion().toString() + CR.toString() + LF.toString());
+      result.add(clientRequest.getRequestHeader().getVersion().toString() + SPACE + StatusCode.STATUS_CODE_200.toString());
       if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.GET) {
         System.out.println("Get command.");
         //TODO: Reason phrase (optional)
 
+        byte[] content = retrieveContentFromFile("/home/eleonora/Documents/school/3bach /sem2/networks/httpLab/chatserver/src/main/resources/HelloWorld.html");
+        result.add("Content-Length:" +content.length);
+        result.add(CR.toString()+LF.toString());
         ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(result);
         System.out.println(responseHeader.getHeaderText());
-        result.add(CR.toString()+LF.toString());
+
         System.out.println("get executes");
-        return new ServerResponse(responseHeader, retrieveContentFromFile(clientRequest.getRequestHeader().getPath()));
+
+        return new ServerResponse(responseHeader,content);
       } else {
         System.out.println("clientRequest: " + clientRequest.getRequestHeader().getRequestText());
         System.out.println("Not a get request");
