@@ -24,7 +24,6 @@ public class ChatClient {
   private static final Character CR = '\r';
   private static final Character LF = '\n';
   private static final String SPACE = " ";
-  private static final String responseFileName = "response";
 
   private HTTPVersion HTTPVersion;
   private String responseDirPath;
@@ -70,7 +69,7 @@ public class ChatClient {
     if (serverResponse.isText()) {
       // Write the text response to file.
       String text = new String(serverResponse.getContent(), serverResponse.getResponseHeader().getCharSet());
-      FileProcessor.writeToFile(HtmlProcessor.MakeAllImgPathsRelativeInHtml(text), responseDirPath + responseFileName + "." + serverResponse.getTextType());
+      FileProcessor.writeToFile(HtmlProcessor.MakeAllImgPathsRelativeInHtml(text), responseDirPath + ipAddress.getCanonicalHostName()+serverResponse.getPath() + "." + serverResponse.getTextType());
 
       // Print response text.
       System.out.println(text);
@@ -130,7 +129,7 @@ public class ChatClient {
     outToServer.flush();
 
     // Process the header
-    ServerResponse.ResponseHeader responseHeader = HTTPReader.readServerResponseHeader(inFromServer);
+    ServerResponse.ResponseHeader responseHeader = readServerResponseHeader(inFromServer);
 
     if (responseHeader.getStatusCode().getCode() == 100) {
       // Retry the command.
@@ -271,7 +270,7 @@ public static ServerResponse.ResponseHeader readServerResponseHeader(DataInputSt
 
     // Default values.
     private int port = 80;
-    private String responseDirPath = "outputs/";
+    private String responseDirPath = "websites/";
     private HTTPVersion HTTPVersion = Objects.HTTPVersion.HTTP_1_1;
 
     // IpAddress has to be set before building the ChatClient.

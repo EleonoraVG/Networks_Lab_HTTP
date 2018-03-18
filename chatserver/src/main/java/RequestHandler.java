@@ -61,7 +61,7 @@ public class RequestHandler implements Runnable {
         System.out.println("Get command.");
         //TODO: Reason phrase (optional)
 
-        byte[] content = retrieveContentFromFile("/home/eleonora/Documents/school/3bach /sem2/networks/httpLab/chatserver/src/main/resources/HelloWorld.html");
+        byte[] content = retrieveContentFromFile("chatserver/src/main/resources/HelloWorld.html");
         result.add("Content-Length:" +content.length);
         result.add(CR.toString()+LF.toString());
         ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(result);

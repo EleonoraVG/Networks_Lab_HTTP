@@ -7,6 +7,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Paths;
 
 public class FileProcessor {
 
@@ -29,6 +30,7 @@ public class FileProcessor {
 
   public static void writeToFile(String content, File file) {
     try {
+      System.out.println("Where the file is written: " + file.getAbsolutePath());
       FileWriter writer = new FileWriter(file, false);
       writer.write(content);
       writer.flush();

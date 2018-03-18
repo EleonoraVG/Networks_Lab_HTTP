@@ -24,15 +24,6 @@ public abstract class HTTPReader {
     return new ServerSocket(port, backlog, ipAddress);
   }
 
-  public static ResponseHeader readServerResponseHeader(DataInputStream inFromServer) throws IOException {
-    List<String> headerStrings = readHeader(inFromServer);
-    return new ResponseHeader(headerStrings);
-  }
-
-  public static RequestHeader readClientRequestHeader(DataInputStream inFromClient) throws IOException {
-    return new RequestHeader(readHeader(inFromClient));
-  }
-
   public static List<String> readHeader(DataInputStream inputStream) throws IOException {
     List<String> headerStrings = new ArrayList<>();
     boolean headerDone = false;

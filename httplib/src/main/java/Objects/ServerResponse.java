@@ -20,6 +20,9 @@ public class ServerResponse {
     return responseHeader;
   }
 
+  public String getPath(){
+    return responseHeader.path;
+  }
   public byte[] getContent() {
     return content;
   }
@@ -59,6 +62,7 @@ public class ServerResponse {
     private String transferEncoding = null;
     private String headerText = null;
     private HTTPVersion version = null;
+    private String path = null;
 
     //TODO: can cause errors: instead rewrite whole headertext on change!!!
     public void setContentLength(Integer contentLength) {
@@ -79,6 +83,7 @@ public class ServerResponse {
           statusCode = StatusCode.getStatusCodeForInt(Integer.parseInt(line.split(" ")[1]));
           String[] elements = line.split(" ");
           String httpVersionLine = elements[1].trim();
+          path = elements[2].trim();
           if (httpVersionLine.equals(HTTPVersion.HTTP_1_0.toString())) {
             version = HTTPVersion.HTTP_1_0;
           } else {
