@@ -5,6 +5,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import static Constants.HTTPConstants.ENDOFLINE;
+import static Constants.HTTPConstants.SPACE;
+
 //TODO: Comments!!!!
 public class ServerResponse {
 
@@ -61,23 +64,17 @@ public class ServerResponse {
     private HTTPVersion version = null;
     private String path = null;
 
-    //TODO: can cause errors: instead rewrite whole headertext on change!!!
-    public void setContentLength(Integer contentLength) {
-      this.contentLength = contentLength;
-      this.headerText = headerText+ "Content-Length: " + contentLength;
-    }
-
     public ResponseHeader(List<String> headerTextList) {
       StringBuilder headerTextBuilder = new StringBuilder();
 
       // Extract information from the header text.
       for (String line : headerTextList) {
         // Build the header text
-        headerTextBuilder.append(line + '\r' +'\n');
+        headerTextBuilder.append(line + ENDOFLINE);
 
         // extract information from the line.
         if (Pattern.matches("HTTP/.*", line)) {
-          statusCode = StatusCode.getStatusCodeForInt(Integer.parseInt(line.split(" ")[1]));
+          statusCode = StatusCode.getStatusCodeForInt(Integer.parseInt(line.split(SPACE)[1]));
           String[] elements = line.split(" ");
           String httpVersionLine = elements[1].trim();
           if (httpVersionLine.equals(HTTPVersion.HTTP_1_0.toString())) {
@@ -106,8 +103,8 @@ public class ServerResponse {
           connectionField = line.split(":")[1].trim();
         }
       }
+      headerTextBuilder.append(ENDOFLINE);
       headerText = headerTextBuilder.toString();
-
     }
 
     private class ContentType {

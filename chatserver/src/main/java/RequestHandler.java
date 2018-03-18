@@ -5,13 +5,12 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.*;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 
 import static Constants.HTTPConstants.ENDOFLINE;
@@ -24,7 +23,7 @@ import static Helpers.HTTPReader.readHeader;
  */
 public class RequestHandler implements Runnable {
 
-  private static final String websitesDir = "websites";
+  private static final String serverDir = "websites";
   private static final String startFilePath = "HelloWorld.html";
 
   private Socket clientSocket;
@@ -66,52 +65,67 @@ public class RequestHandler implements Runnable {
 
   private ServerResponse createResponse(ClientRequest clientRequest) {
     try {
-      List<String> result = new ArrayList<String>();
+
+      System.out.println(clientRequest.getRequestHeader().getRequestText());
+      List<String> headerStrings = new ArrayList<>();
+      byte[] content = new byte[]{};
 
       // add the initial response line
-      result.add(clientRequest.getRequestHeader().getVersion().toString() + SPACE + StatusCode.STATUS_CODE_200.toString());
+      headerStrings.add(clientRequest.getRequestHeader().getVersion().toString() + SPACE + StatusCode.STATUS_CODE_200.toString());
       // Add the date
-      result.add("Date:" + SPACE + formatDateInImfFixDate(Instant.now().atZone(ZoneId.of("GMT"))));
+      headerStrings.add("Date:" + SPACE + formatDateInImfFixDate(Instant.now().atZone(ZoneId.of("GMT"))));
 
-      
       // Process a GET request
       if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.GET) {
-        byte[] content;
-        //TODO: Reason phrase (optional)
+
         String path = clientRequest.getRequestHeader().getPath();
-        if (path == null || path.equals("/") || path.equals("")) {
-          content = retrieveContentFromFile(websitesDir + "/" + startFilePath);
+        if (path == null || path.equals("/") || path.equals(SPACE)) {
+          // Retrieve the starting page
+          path = serverDir + "/" + startFilePath;
         } else {
-          content = retrieveContentFromFile(websitesDir + path);
+          path = serverDir + path;
         }
-        result.add("Content-Length:" + content.length);
-        result.add(ENDOFLINE);
-        ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(result);
-        System.out.println(responseHeader.getHeaderText());
-        ServerResponse response = new ServerResponse(responseHeader, content);
-        return response;
+        content = retrieveContentFromFile(path);
+        headerStrings.add("Content-Length:" + SPACE + content.length);
+
+        String[] splitPath = path.split("\\.");
+        headerStrings.add(
+                "Content-Type:" + SPACE + "text/" + splitPath[splitPath.length - 1].trim() + ";"
+                        + SPACE + Charset.defaultCharset());
+
+        ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+        return new ServerResponse(responseHeader, content);
       } else {
+        headerStrings.add("Content-length:" + SPACE + content.length);
         System.out.println("clientRequest: " + clientRequest.getRequestHeader().getRequestText());
         System.out.println("Not a get request");
-        return new ServerResponse(new ServerResponse.ResponseHeader(result), new byte[]{});
+        return new ServerResponse(new ServerResponse.ResponseHeader(headerStrings), new byte[]{});
       }
     } catch (IOException e) {
       StatusCode statusCode = StatusCode.STATUS_CODE_404;
       List<String> header = new ArrayList<>();
-      header.add(statusCode.toString() + SPACE + clientRequest.getRequestHeader().getPath());
+      header.add("HTTP/1.1" + statusCode.toString() + SPACE + clientRequest.getRequestHeader().getPath());
 
       return new ServerResponse(new ServerResponse.ResponseHeader(header), new byte[]{});
+//    } catch (NullPointerException e) {
+//      System.out.println(e.getMessage());
+//      List<String> header = new ArrayList<>();
+//      header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_500.toString());
+//      return new ServerResponse(new ServerResponse.ResponseHeader(header), new byte[]{});
+
     }
   }
 
   private String formatDateInImfFixDate(ZonedDateTime dateTime) {
-    return dateTime.getDayOfWeek().name() + "," + SPACE
+    String dayOfTheWeek = dateTime.getDayOfWeek().name();
+
+    return dayOfTheWeek.substring(0, 1) + dayOfTheWeek.substring(1, 3).toLowerCase() + "," + SPACE
             + dateTime.getDayOfMonth() + SPACE
-            + dateTime.getMonth().name() + SPACE
+            + dateTime.getMonth().name().substring(0, 1) + dateTime.getMonth().name().substring(1, 3).toLowerCase() + SPACE
             + dateTime.getYear() + SPACE
             + dateTime.getHour() + ":"
             + dateTime.getMinute() + ":"
-            + dateTime.getSecond() + ":" + SPACE
+            + dateTime.getSecond() + SPACE
             + "GMT";
   }
 

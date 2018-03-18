@@ -27,12 +27,11 @@ public class RequestResponder implements Runnable {
   public void run() {
     try {
 
-      // Create a new outputStream to the client socket
-      System.out.println(clientSocket.getOutputStream());
       System.out.println(serverResponse.getResponseHeader().getHeaderText());
+
       DataOutputStream outputStream = new DataOutputStream(clientSocket.getOutputStream());
 
-
+      // Write to the clientSocket.
       outputStream.writeBytes(serverResponse.getResponseHeader().getHeaderText());
       outputStream.write(serverResponse.getContent());
       outputStream.writeByte('\r');
@@ -44,8 +43,8 @@ public class RequestResponder implements Runnable {
         clientSocket.close();
       else {
         // Wait for more requests from the socket.
-       //TODO: Don't close connection for HTTP/1.1
-      //  clientSocket.close();
+        //TODO: Don't close connection for HTTP/1.1
+        //  clientSocket.close();
         threadPool.execute(new RequestHandler(clientSocket, threadPool));
       }
 
