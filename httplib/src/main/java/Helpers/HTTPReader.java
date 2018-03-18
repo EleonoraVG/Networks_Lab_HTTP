@@ -25,13 +25,14 @@ public abstract class HTTPReader {
   public static List<String> readHeader(DataInputStream inputStream) throws IOException {
     List<String> headerStrings = new ArrayList<>();
 
-    // Read the first line
+    // Read until the response is not an empty string.
     byte[] firstLineBytes = readOneLine(inputStream);
     String firstLine = new String(firstLineBytes);
-
-    if (!firstLine.isEmpty()) {
-      headerStrings.add(firstLine);
+    while (firstLine.isEmpty()) {
+      firstLineBytes = readOneLine(inputStream);
+      firstLine = new String(firstLineBytes);
     }
+    headerStrings.add(firstLine);
 
     boolean headerDone = false;
     while (!headerDone) {

@@ -97,22 +97,16 @@ public class RequestHandler implements Runnable {
         return new ServerResponse(responseHeader, content);
       } else {
         headerStrings.add("Content-length:" + SPACE + content.length);
-        System.out.println("clientRequest: " + clientRequest.getRequestHeader().getRequestText());
+        System.out.println("clientRequest:" + SPACE + clientRequest.getRequestHeader().getRequestText());
         System.out.println("Not a get request");
         return new ServerResponse(new ServerResponse.ResponseHeader(headerStrings), new byte[]{});
       }
     } catch (IOException e) {
       StatusCode statusCode = StatusCode.STATUS_CODE_404;
       List<String> header = new ArrayList<>();
-      header.add("HTTP/1.1" + statusCode.toString() + SPACE + clientRequest.getRequestHeader().getPath());
-
+      header.add("HTTP/1.1" + SPACE + statusCode.toString());
+      header.add("Content-Length:" + SPACE + 0);
       return new ServerResponse(new ServerResponse.ResponseHeader(header), new byte[]{});
-//    } catch (NullPointerException e) {
-//      System.out.println(e.getMessage());
-//      List<String> header = new ArrayList<>();
-//      header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_500.toString());
-//      return new ServerResponse(new ServerResponse.ResponseHeader(header), new byte[]{});
-
     }
   }
 

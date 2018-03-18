@@ -47,7 +47,6 @@ public class RequestResponder implements Runnable {
         //  clientSocket.close();
         threadPool.execute(new RequestHandler(clientSocket, threadPool));
       }
-
     } catch (IOException e) {
       System.out.println(e.getMessage());
     }

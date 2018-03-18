@@ -24,7 +24,7 @@ public enum StatusCode {
         stringStatus = "400 Bad Request";
         break;
       case 404:
-        stringStatus = "404 File Not Found";
+        stringStatus = "404 Not Found";
         break;
       case 500:
         stringStatus = "500 Server Error";
