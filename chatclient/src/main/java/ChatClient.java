@@ -69,7 +69,7 @@ public class ChatClient {
     if (serverResponse.isText()) {
       // Write the text response to file.
       String text = new String(serverResponse.getContent(), serverResponse.getResponseHeader().getCharSet());
-      FileProcessor.writeToFile(HtmlProcessor.MakeAllImgPathsRelativeInHtml(text), responseDirPath + ipAddress.getCanonicalHostName()+serverResponse.getPath() + "." + serverResponse.getTextType());
+      FileProcessor.writeToFile(HtmlProcessor.MakeAllImgPathsRelativeInHtml(text), responseDirPath + ipAddress.getHostName()+ "-response" + "." + serverResponse.getTextType());
 
       // Print response text.
       System.out.println(text);

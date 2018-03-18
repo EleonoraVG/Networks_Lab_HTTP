@@ -5,6 +5,7 @@ public enum StatusCode {
   STATUS_CODE_100(100),
   STATUS_CODE_200(200),
   STATUS_CODE_400(400),
+  STATUS_CODE_404(404),
   STATUS_CODE_500(500),
   STATUS_CODE_304(304);
 
@@ -21,6 +22,9 @@ public enum StatusCode {
         break;
       case 400:
         stringStatus = "400 Bad Request";
+        break;
+      case 404:
+        stringStatus = "404 File Not Found";
         break;
       case 500:
         stringStatus = "500 Server Error";

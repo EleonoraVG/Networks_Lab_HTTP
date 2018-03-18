@@ -23,6 +23,9 @@ public class RequestHandler implements Runnable {
   private static final Character LF = '\n';
   private static final String SPACE = " ";
 
+  private static final String websitesDir = "websites";
+  private static final String startFilePath = "HelloWorld.html";
+
   private Socket clientSocket;
   private ExecutorService threadPool;
 
@@ -33,6 +36,7 @@ public class RequestHandler implements Runnable {
 
   public void run() {
     try {
+
       // Process the request header and schedule responding
 
       DataInputStream inFromClient = new DataInputStream(clientSocket.getInputStream());
@@ -42,6 +46,8 @@ public class RequestHandler implements Runnable {
       if (header.RequestHasMessageBody()) {
         requestBuilder.setContent(retrieveContentInHeader(header, inFromClient));
       }
+      while (inFromClient.available() != 0) inFromClient.read();
+
       ClientRequest request = requestBuilder.build();
 
       // Let the threadPool execute a requestResponder
@@ -57,32 +63,36 @@ public class RequestHandler implements Runnable {
     try {
       List<String> result = new ArrayList<String>();
       result.add(clientRequest.getRequestHeader().getVersion().toString() + SPACE + StatusCode.STATUS_CODE_200.toString());
-      if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.GET) {
-        System.out.println("Get command.");
-        //TODO: Reason phrase (optional)
 
-        byte[] content = retrieveContentFromFile("chatserver/src/main/resources/HelloWorld.html");
+      // Process a get request
+      if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.GET) {
+        byte[] content;
+        //TODO: Reason phrase (optional)
+        String path = clientRequest.getRequestHeader().getPath();
+        if (path == null||path.equals("/") || path.equals("")) {
+          content = retrieveContentFromFile(websitesDir + "/" + startFilePath);
+        }
+        else {
+          content = retrieveContentFromFile(websitesDir+path);
+        }
         result.add("Content-Length:" +content.length);
         result.add(CR.toString()+LF.toString());
         ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(result);
         System.out.println(responseHeader.getHeaderText());
-
-        System.out.println("get executes");
-
-        return new ServerResponse(responseHeader,content);
+        ServerResponse response = new ServerResponse(responseHeader,content);
+        return response;
       } else {
         System.out.println("clientRequest: " + clientRequest.getRequestHeader().getRequestText());
         System.out.println("Not a get request");
         return new ServerResponse(new ServerResponse.ResponseHeader(result),new byte[]{});
       }
     } catch (IOException e) {
-      System.out.println("IOExceptionThrown.");
-      System.out.println("404 Page Not Found.");
-      System.out.println(e.getMessage());
-    }
+      StatusCode statusCode = StatusCode.STATUS_CODE_404;
+      List<String> header = new ArrayList<>();
+      header.add(statusCode.toString() + SPACE + clientRequest.getRequestHeader().getPath());
 
-    //TODO: Handle exceptions!!!!
-    return null;
+      return new ServerResponse(new ServerResponse.ResponseHeader(header),new byte[]{});
+    }
   }
 
   private byte[] retrieveContentFromFile(String path) throws IOException {
