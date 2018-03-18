@@ -20,7 +20,7 @@ public class HtmlProcessor {
   String htmlText;
   Document document;
 
-  HtmlProcessor(String htmlPageContents){
+  public HtmlProcessor(String htmlPageContents){
     htmlText = htmlPageContents;
     document = Jsoup.parse(htmlPageContents);
   }
@@ -56,12 +56,14 @@ public class HtmlProcessor {
 
   /**
    * Change all links to images in the Html to a relative path.
+   * Does not alter the html document in the processor but returns a new altered document.
    *
    * @return The HTML text with all image paths made relative.
    */
-  public String MakeAllImgPathsRelativeInHtml(){
-    Elements images = document.getElementsByTag("img");
-    Elements metaElements = document.getElementsByTag("meta");
+  public String retrieveRelativeImagePathsHtml(){
+    Document copyDocument = document.clone();
+    Elements images = copyDocument.getElementsByTag("img");
+    Elements metaElements = copyDocument.getElementsByTag("meta");
 
     // Change all paths to a relative path
     for (Element imgElem : images) {
@@ -81,6 +83,6 @@ public class HtmlProcessor {
       }
     }
 
-    return document.html();
+    return copyDocument.html();
   }
 }

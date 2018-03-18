@@ -51,6 +51,8 @@ public enum StatusCode {
         return STATUS_CODE_200;
       case 400:
         return STATUS_CODE_400;
+      case 404:
+        return STATUS_CODE_404;
       case 500:
         return STATUS_CODE_500;
       case 304:

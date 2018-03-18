@@ -13,17 +13,19 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static Helpers.HTTPReader.*;
+import static Objects.HTTPVersion.HTTP_1_1;
 
-//TODO: Beautify
 
 public class ChatClient {
 
   private static final Character CR = '\r';
   private static final Character LF = '\n';
   private static final String SPACE = " ";
+  private static final String ENDOFLINE = CR.toString() + LF.toString();
 
   private HTTPVersion HTTPVersion;
   private String responseDirPath;
@@ -54,56 +56,107 @@ public class ChatClient {
    * @throws IOException Thrown when propagated from called functions
    */
   public void runAndSaveResult(HTTPCommand command) throws IOException {
-
+    ServerResponse response;
     DataInputStream inFromServer = null;
     DataOutputStream outToServer = null;
 
     // Establish an initial connection in case of HTTP/1.1
-    if (HTTPVersion.equals(HTTPVersion.HTTP_1_1)) {
+    if (HTTPVersion.equals(HTTP_1_1)) {
       startConnection();
       inFromServer = new DataInputStream(clientSocket.getInputStream());
       outToServer = new DataOutputStream(clientSocket.getOutputStream());
+      response = executeCommand(inFromServer, outToServer, createRequest(command, ipAddress.getHostName() + "/"));
+    } else {
+      // Create a new connection for every command in case of HTTP/1.0
+      response = executeCommandHTTP10(createRequest(command, ipAddress.getHostName() + "/"));
     }
-    ServerResponse serverResponse = executeCommand(inFromServer, outToServer, createCommandString(command, ipAddress.getHostName() + "/"));
 
-    if (serverResponse.isText()) {
-      // Write the text response to file.
-      String text = new String(serverResponse.getContent(), serverResponse.getResponseHeader().getCharSet());
-      FileProcessor.writeToFile(HtmlProcessor.MakeAllImgPathsRelativeInHtml(text), responseDirPath + ipAddress.getHostName()+ "-response" + "." + serverResponse.getTextType());
+    //TODO: Support other types
+    // The first response should be text.
+    if (response.isText()) {
 
-      // Print response text.
+      // Print the response header
+      System.out.println(response.getResponseHeader().getHeaderText());
+
+      // Create and print a string from the html in the right encoding.
+      String text = new String(response.getContent(), response.getResponseHeader().getCharSet());
       System.out.println(text);
 
+      // Create a new HTML processor
+      HtmlProcessor htmlProcessor = new HtmlProcessor(text);
+
+      // Write the HTML text to file.
+      FileProcessor.writeToFile(htmlProcessor.retrieveRelativeImagePathsHtml(),
+              responseDirPath + ipAddress.getHostName() + "-response" + "." + response.getTextType());
+
+      // In case of a get command retrieve the new page.
       if (command.equals(HTTPCommand.GET)) {
-        List<String> imageLocations = HtmlProcessor.retrieveImageLocations(text);
-        imageLocations = imageLocations.stream().filter(x -> !x.isEmpty()).collect(Collectors.toList());
+
+        // Retrieve imageLocations from the html.
+        List<String> imageLocations = htmlProcessor
+                .retrieveImageLocations().stream()
+                .filter(x -> !x.isEmpty())
+                .collect(Collectors.toList());
+
         for (String imgLoc : imageLocations) {
           //TODO: clean this up.
           String commandString;
-          if (HTTPVersion.equals(HTTPVersion.HTTP_1_1)) {
-            commandString = "GET" + SPACE + "http://" + ipAddress.getHostName() + "/" + imgLoc + SPACE + HTTPVersion.toString() + CR.toString() + LF.toString() + "Host:" + SPACE + ipAddress.getHostName() + CR.toString() + LF.toString() + CR.toString() + LF.toString();
+          if (HTTPVersion.equals(HTTP_1_1)) {
+            commandString = "GET" + SPACE + "http://" + ipAddress.getHostName() + "/" + imgLoc + SPACE + HTTPVersion.toString() + ENDOFLINE + "Host:" + SPACE + ipAddress.getHostName() + ENDOFLINE + ENDOFLINE;
+            response = executeCommand(inFromServer, outToServer, commandString);
           } else {
             commandString = "GET" + SPACE + "http://" + ipAddress.getHostName() + "/" + imgLoc + SPACE + HTTPVersion.toString() + CR.toString() + LF.toString() + CR.toString() + LF.toString();
+            response = executeCommandHTTP10(commandString);
           }
-          serverResponse = executeCommand(inFromServer, outToServer, commandString);
-          System.out.println(serverResponse.getResponseHeader().getHeaderText());
-          if (!serverResponse.isImage()) {
+
+          // Print the header of the response
+          System.out.println(response.getResponseHeader().getHeaderText());
+
+          // Write the image to file.
+          if (!response.isImage()) {
             throw new IllegalStateException("The responseHeader does not indicate this as an image.");
           } else {
             // Process the image contents
-            BufferedImage image = ImageIO.read(new ByteArrayInputStream(serverResponse.getContent()));
-            FileProcessor.writeImageToFile(image, serverResponse.getImageType(), responseDirPath + imgLoc);
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(response.getContent()));
+            FileProcessor.writeImageToFile(image, response.getImageType(), responseDirPath + imgLoc);
           }
         }
       }
     }
 
     // Close the connection after all commands are executed.
-    if (HTTPVersion.equals(HTTPVersion.HTTP_1_1)) {
+    if (HTTPVersion.equals(HTTP_1_1)) {
       inFromServer.close();
       outToServer.close();
       closeConnection();
     }
+  }
+
+  /**
+   * Execute a HTTP10 command.
+   * First establish a connection to the server.]
+   * Execute the command.
+   * Close the connection to the server.
+   *
+   * @param commandString
+   * @return
+   * @throws IOException
+   */
+  private ServerResponse executeCommandHTTP10(String commandString) throws IOException {
+
+    // Establish a connection
+    startConnection();
+    DataInputStream inFromServer = new DataInputStream(clientSocket.getInputStream());
+    DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
+
+    ServerResponse response = executeCommand(inFromServer, outToServer, commandString);
+
+    // Close the connection
+    inFromServer.close();
+    outToServer.close();
+    closeConnection();
+
+    return response;
   }
 
   /**
@@ -116,13 +169,6 @@ public class ChatClient {
    * @throws IOException
    */
   private ServerResponse executeCommand(DataInputStream inFromServer, DataOutputStream outToServer, String commandString) throws IOException {
-    //TODO: Account for the character encoding.
-    if (HTTPVersion.equals(HTTPVersion.HTTP_1_0)) {
-      // HTTP/1.0 opens a new connection for every command.
-      startConnection();
-      inFromServer = new DataInputStream(clientSocket.getInputStream());
-      outToServer = new DataOutputStream(clientSocket.getOutputStream());
-    }
 
     // Send request to the server
     outToServer.writeBytes(commandString);
@@ -133,7 +179,7 @@ public class ChatClient {
 
     if (responseHeader.getStatusCode().getCode() == 100) {
       // Retry the command.
-      // Only possible with HTML.
+      // Only possible with HTTP/1.1
       executeCommand(inFromServer, outToServer, commandString);
     }
 
@@ -143,7 +189,7 @@ public class ChatClient {
     byte[] response;
     if (responseHeader.getTransferEncoding() != null && responseHeader.getTransferEncoding().equals("chunked")) {
 
-      // Process chunks.
+      // Process chunks until and empty chunk arrives
       response = HTTPReader.readChunkFromServer(inFromServer, responseHeader.getCharSet());
       while (response.length != 0) {
         contentBytesStream.write(response);
@@ -166,25 +212,28 @@ public class ChatClient {
 
     }
 
-    // Clear out and close the DataInputStream.
+    // Clear out the in from server data stream and close the bytes stream.
     while (inFromServer.available() != 0) {
       readOneLine(inFromServer);
     }
     contentBytesStream.flush();
     contentBytesStream.close();
 
-    // Http/1.0 closes the connection for every command.
-    if (HTTPVersion.equals(HTTPVersion.HTTP_1_0)) {
-      inFromServer.close();
-      outToServer.close();
-      closeConnection();
-    }
     return new ServerResponse(responseHeader, contentBytesStream.toByteArray());
   }
-public static ServerResponse.ResponseHeader readServerResponseHeader(DataInputStream inFromServer) throws IOException {
+
+  /**
+   * Read a responseHeader from the server.
+   *
+   * @param inFromServer
+   * @return
+   * @throws IOException
+   */
+  private ServerResponse.ResponseHeader readServerResponseHeader(DataInputStream inFromServer) throws IOException {
     List<String> headerStrings = readHeader(inFromServer);
     return new ServerResponse.ResponseHeader(headerStrings);
   }
+
   /**
    * Create the HTTP command string that will be send to the Server.
    *
@@ -192,30 +241,32 @@ public static ServerResponse.ResponseHeader readServerResponseHeader(DataInputSt
    * @param path    path in the initial request line.
    * @throws IOException Throw if error occurs while reading user input.
    */
-  private String createCommandString(HTTPCommand command, String path) throws IOException {
+  private String createRequest(HTTPCommand command, String path) throws IOException {
     Preconditions.checkNotNull(command);
-    //TODO fix appending http:// only when necessary !!!
-    String result = command.toString() + SPACE + "http://" + path + SPACE + HTTPVersion.toString();
-    if (HTTPVersion.equals(HTTPVersion.HTTP_1_1)) {
-      result += CR.toString() + LF.toString() + "Host: " + ipAddress.getHostName();
+    String result;
+    if (!Pattern.matches("http://.*", path)) {
+      result = command.toString() + SPACE + "http://" + path + SPACE + HTTPVersion.toString() + ENDOFLINE;
+    } else {
+      result = command.toString() + SPACE + path + SPACE + HTTPVersion.toString() + ENDOFLINE;
+    }
+    if (HTTPVersion.equals(HTTP_1_1)) {
+      result += "Host: " + ipAddress.getHostName() + ENDOFLINE;
     }
 
-    //TODO: Test POST and PUT methods!!!!
+    // Read user input for the content of the POST or PUT command.
     if (command.equals(HTTPCommand.POST) || command.equals(HTTPCommand.PUT)) {
-      try {
-        // Read one line of user input.
-        BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("Write content: ");
-        String input = inFromUser.readLine();
-        inFromUser.close();
-        result += CR.toString() + LF.toString() + "Content-Length:" + SPACE + input.trim().length() + CR.toString() + LF.toString() + CR.toString() + LF.toString() + input;
-      } catch (IOException e) {
-        System.out.println("Error while reading user input");
-        throw e;
-      }
 
+      // Read one line of user input.
+      BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
+      System.out.println("Write content: ");
+      String input = inFromUser.readLine();
+      inFromUser.close();
+
+      // Append the content of the user input to the HTTP request
+      result += "Content-Length:" + SPACE + input.trim().length() + ENDOFLINE + ENDOFLINE + input + ENDOFLINE;
     }
-    result += CR.toString() + LF.toString() + CR.toString() + LF.toString();
+
+    result += ENDOFLINE + ENDOFLINE;
     return result;
   }
 
@@ -271,15 +322,22 @@ public static ServerResponse.ResponseHeader readServerResponseHeader(DataInputSt
     // Default values.
     private int port = 80;
     private String responseDirPath = "websites/";
-    private HTTPVersion HTTPVersion = Objects.HTTPVersion.HTTP_1_1;
+    private HTTPVersion HTTPVersion = HTTP_1_1;
 
     // IpAddress has to be set before building the ChatClient.
     private InetAddress ipAddress;
 
     public ChatClient.Builder setIpAddress(String string) throws UnknownHostException {
-      InetAddress ipAddress = InetAddress.getByName(string);
-      Preconditions.checkNotNull(ipAddress);
-      this.ipAddress = ipAddress;
+      Preconditions.checkNotNull(string);
+      InetAddress inetAddress;
+      if (Pattern.matches("localhost.*", string.toLowerCase().trim())) {
+        inetAddress = InetAddress.getLocalHost();
+      } else {
+        inetAddress = InetAddress.getByName(string);
+      }
+
+      Preconditions.checkNotNull(inetAddress);
+      this.ipAddress = inetAddress;
       return this;
     }
 
