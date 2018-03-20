@@ -19,9 +19,11 @@ public class ResponseHeader {
   private String headerText;
   private ContentType contentType;
   private HTTPVersion version;
-  private String path;
 
-  public ResponseHeader(List<String> headerTextList) {
+  private ResponseHeader(List<String> headerTextList) {
+  }
+
+  private String createHeaderText(List<String> headerTextList) {
     StringBuilder headerTextBuilder = new StringBuilder();
 
     // Extract information from the header text.
@@ -30,7 +32,6 @@ public class ResponseHeader {
       // Build the header text
       headerTextBuilder.append(line);
       headerTextBuilder.append(ENDOFLINE);
-
 
       // extract information from the line.
       if (Pattern.matches("HTTP/.*", line)) {
@@ -64,7 +65,7 @@ public class ResponseHeader {
       }
     }
     headerTextBuilder.append(ENDOFLINE);
-    headerText = headerTextBuilder.toString();
+    return headerTextBuilder.toString();
   }
 
   public String getConnectionField() {
@@ -120,4 +121,64 @@ public class ResponseHeader {
         return StandardCharsets.UTF_8;
     }
   }
+
+  //TODO:
+  private class ResponseHeaderBuilder {
+    private StatusCode statusCode;
+    private String connectionField;
+    private String contentEncoding;
+    private Charset charSet;
+    private Integer contentLength;
+    private String transferEncoding;
+    private String headerText;
+    private ContentType contentType;
+    private HTTPVersion version;
+
+    public void setStatusCode(StatusCode statusCode) {
+      this.statusCode = statusCode;
+    }
+
+    public void setConnectionField(String connectionField) {
+      this.connectionField = connectionField;
+    }
+
+    public void setContentEncoding(String contentEncoding) {
+      this.contentEncoding = contentEncoding;
+    }
+
+    public void setCharSet(Charset charSet) {
+      this.charSet = charSet;
+    }
+
+    public void setContentLength(Integer contentLength) {
+      this.contentLength = contentLength;
+    }
+
+    public void setTransferEncoding(String transferEncoding) {
+      this.transferEncoding = transferEncoding;
+    }
+
+    public void setHeaderText(String headerText) {
+      this.headerText = headerText;
+    }
+
+    public void setContentType(ContentType contentType) {
+      this.contentType = contentType;
+    }
+
+    public void setVersion(HTTPVersion version) {
+      this.version = version;
+    }
+
+
+    public void fromText(List<String> headerTextLines) {
+
+    }
+
+    public ResponseHeader build() {
+      ResponseHeader result = new ResponseHeader();
+
+    }
+  }
 }
+

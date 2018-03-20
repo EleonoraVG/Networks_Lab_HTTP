@@ -84,7 +84,7 @@ public class ChatClient {
 
       // Write the HTML text to file.
       FileProcessor.writeToFile(htmlProcessor.retrieveRelativeImagePathsHtml(),
-              responseDirPath + ipAddress.getHostName() + "-response" + "." + response.getTextType());
+              responseDirPath + ipAddress.getHostName() + "-response" + "." + response.getResponseHeader().getContentType().getTextType());
 
       // In case of a get command retrieve the new page.
       if (command.equals(HTTPCommand.GET)) {
@@ -114,7 +114,7 @@ public class ChatClient {
           } else {
             // Process the image contents
             BufferedImage image = ImageIO.read(new ByteArrayInputStream(response.getContent()));
-            FileProcessor.writeImageToFile(image, response.getImageType(), responseDirPath + imgLoc);
+            FileProcessor.writeImageToFile(image, response.getResponseHeader().getContentType().getImageType(), responseDirPath + imgLoc);
           }
         }
       }

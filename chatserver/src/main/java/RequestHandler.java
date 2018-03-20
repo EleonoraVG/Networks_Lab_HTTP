@@ -95,15 +95,15 @@ public class RequestHandler implements Runnable {
                 "Content-Type:" + SPACE + "text/" + splitPath[splitPath.length - 1].trim() + ";"
                         + SPACE + "charset=" + Charset.defaultCharset().toString().toLowerCase());
 
-        ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+        ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
         return new ServerResponse(responseHeader, content);
       } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.HEAD) {
-        ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+        ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
         return new ServerResponse(responseHeader, content);
 
       } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.PUT) {
         FileProcessor.writeToFile(clientRequest.getContent(), serverDir + clientInputsDir + clientRequest.getRequestHeader().getPath());
-        ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+        ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
         return new ServerResponse(responseHeader, content);
 
       } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.POST) {
