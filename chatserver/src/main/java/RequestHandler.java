@@ -1,3 +1,4 @@
+import Helpers.FileProcessor;
 import Helpers.HTTPReader;
 import Objects.*;
 
@@ -5,7 +6,6 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.*;
@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import static Constants.HTTPConstants.ENDOFLINE;
 import static Constants.HTTPConstants.SPACE;
 import static Helpers.HTTPReader.readHeader;
 
@@ -23,8 +22,10 @@ import static Helpers.HTTPReader.readHeader;
  */
 public class RequestHandler implements Runnable {
 
-  private static final String serverDir = "websites";
+  private static final String serverDir = "serverResources";
+  private static final String websiteDir = "websites";
   private static final String startFilePath = "HelloWorld.html";
+  private static final String clientInputDir = "clientInputs";
 
   private Socket clientSocket;
   private ExecutorService threadPool;
@@ -44,8 +45,8 @@ public class RequestHandler implements Runnable {
       RequestHeader header = readRequestHeader(inFromClient);
       requestBuilder.setRequestHeader(header);
 
-      if (header.RequestHasMessageBody()) {
-        requestBuilder.setContent(retrieveContentInHeader(header, inFromClient));
+      if (header.RequestHasMessageBody() || header.getCommand().equals(HTTPCommand.POST) || header.getCommand().equals(HTTPCommand.PUT)) {
+        requestBuilder.setContent(retrieveContentInRequest(header, inFromClient));
       }
 
       // Make sure the client has finished sending the request.
@@ -70,10 +71,11 @@ public class RequestHandler implements Runnable {
       List<String> headerStrings = new ArrayList<>();
       byte[] content = new byte[]{};
 
-      // add the initial response line
+      // Add the initial response line
       headerStrings.add(clientRequest.getRequestHeader().getVersion().toString() + SPACE + StatusCode.STATUS_CODE_200.toString());
+
       // Add the date
-      headerStrings.add("Date:" + SPACE + formatDateInImfFixDate(Instant.now().atZone(ZoneId.of("GMT"))));
+      headerStrings.add(createDateHeaderLine());
 
       // Process a GET request
       if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.GET) {
@@ -81,7 +83,7 @@ public class RequestHandler implements Runnable {
         String path = clientRequest.getRequestHeader().getPath();
         if (path == null || path.equals("/") || path.equals(SPACE)) {
           // Retrieve the starting page
-          path = serverDir + "/" + startFilePath;
+          path = serverDir + websiteDir + "/" + startFilePath;
         } else {
           path = serverDir + path;
         }
@@ -91,10 +93,32 @@ public class RequestHandler implements Runnable {
         String[] splitPath = path.split("\\.");
         headerStrings.add(
                 "Content-Type:" + SPACE + "text/" + splitPath[splitPath.length - 1].trim() + ";"
-                        + SPACE + Charset.defaultCharset());
+                        + SPACE + "charset=" + Charset.defaultCharset().toString().toLowerCase());
 
         ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
         return new ServerResponse(responseHeader, content);
+      } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.HEAD) {
+        ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+        return new ServerResponse(responseHeader, content);
+
+      } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.PUT) {
+        FileProcessor.writeToFile(clientRequest.getContent(), serverDir + clientRequest.getRequestHeader().getPath());
+        ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+        return new ServerResponse(responseHeader, content);
+
+      } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.POST) {
+        try {
+          FileProcessor.appendToFile(clientRequest.getContent(), serverDir + clientRequest.getRequestHeader().getPath());
+        } catch (IOException e) {
+          List<String> header = new ArrayList<>();
+          header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
+          header.add("Content-Length:" + SPACE + 0);
+          header.add(createDateHeaderLine());
+          return new ServerResponse(new ServerResponse.ResponseHeader(header), content);
+        }
+        ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+        return new ServerResponse(responseHeader, content);
+
       } else {
         headerStrings.add("Content-length:" + SPACE + content.length);
         System.out.println("clientRequest:" + SPACE + clientRequest.getRequestHeader().getRequestText());
@@ -102,12 +126,16 @@ public class RequestHandler implements Runnable {
         return new ServerResponse(new ServerResponse.ResponseHeader(headerStrings), new byte[]{});
       }
     } catch (IOException e) {
-      StatusCode statusCode = StatusCode.STATUS_CODE_404;
       List<String> header = new ArrayList<>();
-      header.add("HTTP/1.1" + SPACE + statusCode.toString());
+      header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
       header.add("Content-Length:" + SPACE + 0);
+      header.add(createDateHeaderLine());
       return new ServerResponse(new ServerResponse.ResponseHeader(header), new byte[]{});
     }
+  }
+
+  private String createDateHeaderLine() {
+    return "Date:" + SPACE + formatDateInImfFixDate(Instant.now().atZone(ZoneId.of("GMT")));
   }
 
   private String formatDateInImfFixDate(ZonedDateTime dateTime) {
@@ -127,7 +155,7 @@ public class RequestHandler implements Runnable {
     return Files.readAllBytes(Paths.get(path));
   }
 
-  private byte[] retrieveContentInHeader(RequestHeader header, DataInputStream inFromClient) throws IOException {
+  private byte[] retrieveContentInRequest(RequestHeader header, DataInputStream inFromClient) throws IOException {
     byte[] content = null;
     if (header.getContentLength() != null) {
       content = HTTPReader.processWithContentLength(inFromClient, header.getContentLength());

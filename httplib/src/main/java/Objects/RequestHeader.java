@@ -38,9 +38,9 @@ public class RequestHeader {
         }
       } else if (Pattern.matches("host:.*", line.toLowerCase())) {
         host = line.split(":")[1].trim();
-      } else if (Pattern.matches("content-length", line.toLowerCase())) {
+      } else if (Pattern.matches("content-length:.*", line.toLowerCase())) {
         contentLength = Integer.parseInt(line.split(":")[1].trim());
-      } else if (Pattern.matches("content-type", line.toLowerCase())) {
+      } else if (Pattern.matches("content-type:.*", line.toLowerCase())) {
         contentType = line.split(":")[1].trim();
       } else if (Pattern.matches("transfer-encoding:.*", line.toLowerCase())) {
         transferEncoding = line.split(":")[1].trim();
@@ -51,7 +51,8 @@ public class RequestHeader {
       }
     }
     StringBuilder builder = new StringBuilder();
-    requestText.forEach(x -> builder.append(x));
+    builder.append(requestText);
+    //requestText.forEach(x -> builder.append(x));
     this.requestText = builder.toString();
   }
 

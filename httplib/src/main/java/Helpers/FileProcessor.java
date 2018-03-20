@@ -1,6 +1,7 @@
 package Helpers;
 
 import com.google.common.io.Files;
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -8,6 +9,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 public class FileProcessor {
   /**
@@ -21,6 +23,13 @@ public class FileProcessor {
     File file = new File(filePath);
     file.getParentFile().mkdirs();
     return file;
+  }
+
+  /**
+   * Append to an existing file.
+   */
+  public static void appendToFile(byte[] content, String existingFilePath) throws IOException{
+   java.nio.file.Files.write(Paths.get(existingFilePath),content, StandardOpenOption.APPEND);
   }
 
   /**
