@@ -13,9 +13,7 @@ public class ChatServerProgram {
 
   // THESE ARE TODOS FOR THE ASSIGNMENT
 
-  //TODO: Support HEAD
-  //TODO: Support PUT (write to new file) (on the server!!!)
-  //TODO: Support POST (writes to existing file) (on the server!!!)
+  //TODO: Print response.
   //TODO: Support if-modified-since header!
   //TODO: Check for the HTTP/1.1 host field
   //TODO: Support the status codes.

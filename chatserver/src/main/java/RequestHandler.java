@@ -25,7 +25,7 @@ public class RequestHandler implements Runnable {
   private static final String serverDir = "serverResources";
   private static final String websiteDir = "websites";
   private static final String startFilePath = "HelloWorld.html";
-  private static final String clientInputDir = "clientInputs";
+  private static final String clientInputsDir = "clientInputs";
 
   private Socket clientSocket;
   private ExecutorService threadPool;
@@ -102,13 +102,13 @@ public class RequestHandler implements Runnable {
         return new ServerResponse(responseHeader, content);
 
       } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.PUT) {
-        FileProcessor.writeToFile(clientRequest.getContent(), serverDir + clientRequest.getRequestHeader().getPath());
+        FileProcessor.writeToFile(clientRequest.getContent(), serverDir + clientInputsDir + clientRequest.getRequestHeader().getPath());
         ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
         return new ServerResponse(responseHeader, content);
 
       } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.POST) {
         try {
-          FileProcessor.appendToFile(clientRequest.getContent(), serverDir + clientRequest.getRequestHeader().getPath());
+          FileProcessor.appendToFile(clientRequest.getContent(), serverDir + clientInputsDir + clientRequest.getRequestHeader().getPath());
         } catch (IOException e) {
           List<String> header = new ArrayList<>();
           header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
@@ -143,7 +143,8 @@ public class RequestHandler implements Runnable {
 
     return dayOfTheWeek.substring(0, 1) + dayOfTheWeek.substring(1, 3).toLowerCase() + "," + SPACE
             + dateTime.getDayOfMonth() + SPACE
-            + dateTime.getMonth().name().substring(0, 1) + dateTime.getMonth().name().substring(1, 3).toLowerCase() + SPACE
+            + dateTime.getMonth().name().substring(0, 1)
+            + dateTime.getMonth().name().substring(1, 3).toLowerCase() + SPACE
             + dateTime.getYear() + SPACE
             + dateTime.getHour() + ":"
             + dateTime.getMinute() + ":"
@@ -160,7 +161,7 @@ public class RequestHandler implements Runnable {
     if (header.getContentLength() != null) {
       content = HTTPReader.processWithContentLength(inFromClient, header.getContentLength());
     } else if (header.getTransferEncoding() != null) {
-      //Use transfer transcoding
+      //Use transfer encoding
       content = HTTPReader.readChunkFromServer(inFromClient, Charset.defaultCharset());
     }
     return content;

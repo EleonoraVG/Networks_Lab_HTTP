@@ -3,6 +3,7 @@ import Helpers.HTTPReader;
 import Helpers.HtmlProcessor;
 import Objects.HTTPCommand;
 import Objects.HTTPVersion;
+import Objects.ResponseHeader;
 import Objects.ServerResponse;
 import com.google.common.base.Preconditions;
 
@@ -170,7 +171,7 @@ public class ChatClient {
     outToServer.flush();
 
     // Process the header
-    ServerResponse.ResponseHeader responseHeader = readServerResponseHeader(inFromServer);
+    ResponseHeader responseHeader = readServerResponseHeader(inFromServer);
 
     if (responseHeader.getStatusCode().getCode() == 100) {
       // Retry the command.
@@ -224,9 +225,9 @@ public class ChatClient {
    * @return
    * @throws IOException
    */
-  private ServerResponse.ResponseHeader readServerResponseHeader(DataInputStream inFromServer) throws IOException {
+  private ResponseHeader readServerResponseHeader(DataInputStream inFromServer) throws IOException {
     List<String> headerStrings = readHeader(inFromServer);
-    return new ServerResponse.ResponseHeader(headerStrings);
+    return new ResponseHeader(headerStrings);
   }
 
   /**
@@ -316,7 +317,7 @@ public class ChatClient {
 
     // Default values.
     private int port = 80;
-    private String responseDirPath = "websites/";
+    private String responseDirPath = "serverResources/websites/";
     private HTTPVersion HTTPVersion = HTTP_1_1;
 
     // IpAddress has to be set before building the ChatClient.

@@ -36,7 +36,8 @@ public class RequestResponder implements Runnable {
       outputStream.write(serverResponse.getContent());
       outputStream.writeByte('\r');
       outputStream.writeByte('\n');
-      //TODO: Write the headerResponse
+
+      System.out.println(serverResponse.getResponseHeader());
 
       //Close the connection if HTTP/1.0
       if (clientRequest.getRequestHeader().getVersion().equals(HTTPVersion.HTTP_1_0) || clientRequest.getRequestHeader().isConnectionClose())
