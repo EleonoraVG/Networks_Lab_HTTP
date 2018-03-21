@@ -27,9 +27,11 @@ public class RequestHandler implements Runnable {
   private static final String websiteDir = "websites";
   private static final String startFilePath = "HelloWorld.html";
   private static final String clientInputsDir = "clientInputs";
+  private static final String hostName = "eleonora";
 
   private Socket clientSocket;
   private ExecutorService threadPool;
+
 
   public RequestHandler(Socket clientSocket, ExecutorService threadPool) {
     this.clientSocket = clientSocket;
@@ -49,7 +51,7 @@ public class RequestHandler implements Runnable {
       RequestHeader header = readRequestHeader(inFromClient);
       requestBuilder.setRequestHeader(header);
 
-      if (header.isConnectionKeepAlive()){
+      if (header.isConnectionKeepAlive()) {
         clientSocket.setSoTimeout(0);
       }
 
@@ -97,7 +99,7 @@ public class RequestHandler implements Runnable {
         // Retrieve the starting page
         path = serverDir + "/" + websiteDir + "/" + startFilePath;
       } else {
-        path = serverDir +"/" + path;
+        path = serverDir + "/" + path;
       }
 
       try {
@@ -150,6 +152,7 @@ public class RequestHandler implements Runnable {
     List<String> header = new ArrayList<>();
     header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_400.toString());
     header.add("Content-Length:" + SPACE + 0);
+    header.add("Host:" + SPACE + hostName);
     header.add(createDateHeaderLine());
     header.add(ENDOFLINE);
     return new ServerResponse(new ResponseHeader(header), new byte[]{});
@@ -159,6 +162,7 @@ public class RequestHandler implements Runnable {
     List<String> header = new ArrayList<>();
     header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
     header.add("Content-Length:" + SPACE + 0);
+    header.add("Host:" + SPACE + hostName);
     header.add(createDateHeaderLine());
     header.add(ENDOFLINE);
     return new ServerResponse(new ResponseHeader(header), new byte[]{});
@@ -168,6 +172,7 @@ public class RequestHandler implements Runnable {
     List<String> header = new ArrayList<>();
     header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_500.toString());
     header.add("Content-Length:" + SPACE + 0);
+    header.add("Host:" + SPACE + hostName);
     header.add(createDateHeaderLine());
     header.add(ENDOFLINE);
     return new ServerResponse(new ResponseHeader(header), new byte[]{});
@@ -200,6 +205,7 @@ public class RequestHandler implements Runnable {
     if (header.getContentLength() != null) {
       content = HTTPReader.processWithContentLength(inFromClient, header.getContentLength());
     } else if (header.getTransferEncoding() != null) {
+
       //Use transfer encoding
       content = HTTPReader.readChunkFromServer(inFromClient, Charset.defaultCharset());
     }
