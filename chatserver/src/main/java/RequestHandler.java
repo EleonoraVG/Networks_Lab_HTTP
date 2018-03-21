@@ -36,7 +36,10 @@ public class RequestHandler implements Runnable {
   }
 
   public void run() {
+
     try {
+      // The client socket waits 10 seconds for an action.
+      clientSocket.setSoTimeout(10000);
 
       DataInputStream inFromClient = new DataInputStream(clientSocket.getInputStream());
       ClientRequest.Builder requestBuilder = ClientRequest.newBuilder();
@@ -58,10 +61,10 @@ public class RequestHandler implements Runnable {
 
       // Schedule a new task for responding to the client over the socket.
       threadPool.execute(new RequestResponder(serverResponse, request, clientSocket, threadPool));
-
-    } catch (IOException e) {
-      System.out.println(e.getMessage());
+    } catch (Exception e) {
+      threadPool.execute(new RequestResponder(create500Response(), null, clientSocket, threadPool));
     }
+
   }
 
   private ServerResponse createResponse(ClientRequest clientRequest) {
@@ -70,6 +73,11 @@ public class RequestHandler implements Runnable {
     byte[] content = new byte[]{};
 
     System.out.println(clientRequest.getRequestHeader().getRequestText());
+
+    // Check if the client request is valid.
+    if (!isValidRequestHeader(clientRequest.getRequestHeader())) {
+      return create400Response();
+    }
 
     // Add the initial response line
     headerStrings.add(clientRequest.getRequestHeader().getVersion().toString() + SPACE + StatusCode.STATUS_CODE_200.toString());
@@ -129,9 +137,25 @@ public class RequestHandler implements Runnable {
     }
   }
 
+  private ServerResponse create400Response() {
+    List<String> header = new ArrayList<>();
+    header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_400.toString());
+    header.add("Content-Length:" + SPACE + 0);
+    header.add(createDateHeaderLine());
+    return new ServerResponse(new ResponseHeader(header), new byte[]{});
+  }
+
   private ServerResponse create404Response() {
     List<String> header = new ArrayList<>();
     header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
+    header.add("Content-Length:" + SPACE + 0);
+    header.add(createDateHeaderLine());
+    return new ServerResponse(new ResponseHeader(header), new byte[]{});
+  }
+
+  private ServerResponse create500Response() {
+    List<String> header = new ArrayList<>();
+    header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_500.toString());
     header.add("Content-Length:" + SPACE + 0);
     header.add(createDateHeaderLine());
     return new ServerResponse(new ResponseHeader(header), new byte[]{});
@@ -169,6 +193,23 @@ public class RequestHandler implements Runnable {
     }
     return content;
   }
+
+  private boolean isValidRequestHeader(RequestHeader header) {
+    if (header.getVersion() == null || header.getCommand() == null || header.getPath() == null) {
+      return false;
+    }
+
+    if (header.getVersion().equals(HTTPVersion.HTTP_1_1)) {
+      if (header.getHost() == null) {
+        return false;
+      }
+      if (header.RequestHasMessageBody() && header.getContentLength() == null && header.getTransferEncoding() == null) {
+        return false;
+      }
+    }
+    return true;
+  }
+
 
   public static RequestHeader readRequestHeader(DataInputStream inFromClient) throws IOException {
     return new RequestHeader(readHeader(inFromClient));
