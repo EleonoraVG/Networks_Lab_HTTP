@@ -65,73 +65,93 @@ public class RequestHandler implements Runnable {
   }
 
   private ServerResponse createResponse(ClientRequest clientRequest) {
-    try {
+    ResponseHeader.ResponseHeaderBuilder responseBuilder = ResponseHeader.Builder();
+    System.out.println(clientRequest.getRequestHeader().getRequestText());
 
-      System.out.println(clientRequest.getRequestHeader().getRequestText());
-      List<String> headerStrings = new ArrayList<>();
-      byte[] content = new byte[]{};
+    List<String> headerStrings = new ArrayList<>();
+    byte[] content = new byte[]{};
 
-      // Add the initial response line
-      headerStrings.add(clientRequest.getRequestHeader().getVersion().toString() + SPACE + StatusCode.STATUS_CODE_200.toString());
+    // Add the initial response line
+    headerStrings.add(clientRequest.getRequestHeader().getVersion().toString() + SPACE + StatusCode.STATUS_CODE_200.toString());
 
-      // Add the date
-      headerStrings.add(createDateHeaderLine());
+    // Add the date
+    headerStrings.add(createDateHeaderLine());
 
-      // Process a GET request
-      if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.GET) {
+    // Process a GET request
+    if (clientRequest.getRequestHeader().getCommand().equals(HTTPCommand.GET)) {
 
-        String path = clientRequest.getRequestHeader().getPath();
-        if (path == null || path.equals("/") || path.equals(SPACE)) {
-          // Retrieve the starting page
-          path = serverDir + websiteDir + "/" + startFilePath;
-        } else {
-          path = serverDir + path;
-        }
-        content = retrieveContentFromFile(path);
-        headerStrings.add("Content-Length:" + SPACE + content.length);
-
-        String[] splitPath = path.split("\\.");
-        headerStrings.add(
-                "Content-Type:" + SPACE + "text/" + splitPath[splitPath.length - 1].trim() + ";"
-                        + SPACE + "charset=" + Charset.defaultCharset().toString().toLowerCase());
-
-        ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
-        return new ServerResponse(responseHeader, content);
-      } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.HEAD) {
-        ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
-        return new ServerResponse(responseHeader, content);
-
-      } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.PUT) {
-        FileProcessor.writeToFile(clientRequest.getContent(), serverDir + clientInputsDir + clientRequest.getRequestHeader().getPath());
-        ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
-        return new ServerResponse(responseHeader, content);
-
-      } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.POST) {
-        try {
-          FileProcessor.appendToFile(clientRequest.getContent(), serverDir + clientInputsDir + clientRequest.getRequestHeader().getPath());
-        } catch (IOException e) {
-          List<String> header = new ArrayList<>();
-          header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
-          header.add("Content-Length:" + SPACE + 0);
-          header.add(createDateHeaderLine());
-          return new ServerResponse(new ServerResponse.ResponseHeader(header), content);
-        }
-        ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
-        return new ServerResponse(responseHeader, content);
-
+      String path = clientRequest.getRequestHeader().getPath();
+      if (path == null || path.equals("/") || path.equals(SPACE)) {
+        // Retrieve the starting page
+        path = serverDir + websiteDir + "/" + startFilePath;
       } else {
-        headerStrings.add("Content-length:" + SPACE + content.length);
-        System.out.println("clientRequest:" + SPACE + clientRequest.getRequestHeader().getRequestText());
-        System.out.println("Not a get request");
-        return new ServerResponse(new ServerResponse.ResponseHeader(headerStrings), new byte[]{});
+        path = serverDir + path;
       }
-    } catch (IOException e) {
-      List<String> header = new ArrayList<>();
-      header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
-      header.add("Content-Length:" + SPACE + 0);
-      header.add(createDateHeaderLine());
-      return new ServerResponse(new ServerResponse.ResponseHeader(header), new byte[]{});
+
+      try {
+        content = retrieveContentFromFile(path);
+      } catch (IOException e) {
+        List<String> header = new ArrayList<>();
+        header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
+        header.add("Content-Length:" + SPACE + 0);
+        header.add(createDateHeaderLine());
+        return new ServerResponse(new ServerResponse.ResponseHeader(header), content);
+      }
+      headerStrings.add("Content-Length:" + SPACE + content.length);
+
+      String[] splitPath = path.split("\\.");
+      headerStrings.add(
+              "Content-Type:" + SPACE + "text/" + splitPath[splitPath.length - 1].trim() + ";"
+                      + SPACE + "charset=" + Charset.defaultCharset().toString().toLowerCase());
+
+      ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+      return new ServerResponse(responseHeader, content);
+    } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.HEAD) {
+      ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+      return new ServerResponse(responseHeader, content);
+
+    } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.PUT) {
+      FileProcessor.writeToFile(clientRequest.getContent(), serverDir + clientInputsDir + clientRequest.getRequestHeader().getPath());
+      ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+      return new ServerResponse(responseHeader, content);
+
+    } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.POST) {
+      try {
+        FileProcessor.appendToFile(clientRequest.getContent(), serverDir + clientInputsDir + clientRequest.getRequestHeader().getPath());
+      } catch (IOException e) {
+        List<String> header = new ArrayList<>();
+        header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
+        header.add("Content-Length:" + SPACE + 0);
+        header.add(createDateHeaderLine());
+        return new ServerResponse(new ServerResponse.ResponseHeader(header), content);
+      }
+      ServerResponse.ResponseHeader responseHeader = new ServerResponse.ResponseHeader(headerStrings);
+      return new ServerResponse(responseHeader, content);
+
+    } else {
+      headerStrings.add("Content-length:" + SPACE + content.length);
+      System.out.println("clientRequest:" + SPACE + clientRequest.getRequestHeader().getRequestText());
+      System.out.println("Not a get request");
+      return new ServerResponse(new ServerResponse.ResponseHeader(headerStrings), new byte[]{});
     }
+  } catch(
+  IOException e)
+
+  {
+    List<String> header = new ArrayList<>();
+    header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
+    header.add("Content-Length:" + SPACE + 0);
+    header.add(createDateHeaderLine());
+    return new ServerResponse(new ServerResponse.ResponseHeader(header), new byte[]{});
+  }
+
+
+  private ServerResponse create404Response() {
+    List<String> header = new ArrayList<>();
+    header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
+    header.add("Content-Length:" + SPACE + 0);
+    header.add(createDateHeaderLine(
+    return new ServerResponse(new ResponseHeader(header),new byte[]{});
   }
 
   private String createDateHeaderLine() {

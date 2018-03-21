@@ -1,3 +1,4 @@
+
 package Objects;
 
 import java.nio.charset.Charset;
@@ -21,6 +22,7 @@ public class ResponseHeader {
   private HTTPVersion version;
 
   private ResponseHeader(List<String> headerTextList) {
+    headerText = createHeaderText(headerTextList);
   }
 
   private String createHeaderText(List<String> headerTextList) {
@@ -122,63 +124,6 @@ public class ResponseHeader {
     }
   }
 
-  //TODO:
-  private class ResponseHeaderBuilder {
-    private StatusCode statusCode;
-    private String connectionField;
-    private String contentEncoding;
-    private Charset charSet;
-    private Integer contentLength;
-    private String transferEncoding;
-    private String headerText;
-    private ContentType contentType;
-    private HTTPVersion version;
-
-    public void setStatusCode(StatusCode statusCode) {
-      this.statusCode = statusCode;
-    }
-
-    public void setConnectionField(String connectionField) {
-      this.connectionField = connectionField;
-    }
-
-    public void setContentEncoding(String contentEncoding) {
-      this.contentEncoding = contentEncoding;
-    }
-
-    public void setCharSet(Charset charSet) {
-      this.charSet = charSet;
-    }
-
-    public void setContentLength(Integer contentLength) {
-      this.contentLength = contentLength;
-    }
-
-    public void setTransferEncoding(String transferEncoding) {
-      this.transferEncoding = transferEncoding;
-    }
-
-    public void setHeaderText(String headerText) {
-      this.headerText = headerText;
-    }
-
-    public void setContentType(ContentType contentType) {
-      this.contentType = contentType;
-    }
-
-    public void setVersion(HTTPVersion version) {
-      this.version = version;
-    }
-
-
-    public void fromText(List<String> headerTextLines) {
-
-    }
-
-    public ResponseHeader build() {
-      ResponseHeader result = new ResponseHeader();
-
-    }
-  }
 }
+
 
