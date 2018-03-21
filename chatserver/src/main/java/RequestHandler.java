@@ -49,6 +49,10 @@ public class RequestHandler implements Runnable {
       RequestHeader header = readRequestHeader(inFromClient);
       requestBuilder.setRequestHeader(header);
 
+      if (header.isConnectionKeepAlive()){
+        clientSocket.setSoTimeout(0);
+      }
+
       if (header.RequestHasMessageBody() || header.getCommand().equals(HTTPCommand.POST) || header.getCommand().equals(HTTPCommand.PUT)) {
         requestBuilder.setContent(retrieveContentInRequest(header, inFromClient));
       }
@@ -65,7 +69,6 @@ public class RequestHandler implements Runnable {
     } catch (Exception e) {
       threadPool.execute(new RequestResponder(create500Response(), null, clientSocket, threadPool));
     }
-
   }
 
   private ServerResponse createResponse(ClientRequest clientRequest) {
@@ -94,7 +97,7 @@ public class RequestHandler implements Runnable {
         // Retrieve the starting page
         path = serverDir + "/" + websiteDir + "/" + startFilePath;
       } else {
-        path = serverDir + "/" + path;
+        path = serverDir +"/" + path;
       }
 
       try {

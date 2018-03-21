@@ -83,7 +83,7 @@ public class ChatClient {
       HtmlProcessor htmlProcessor = new HtmlProcessor(text);
 
       // Write the HTML text to file.
-      FileProcessor.writeToFile(htmlProcessor.retrieveRelativeImagePathsHtml(),
+      FileProcessor.writeToFile(htmlProcessor.retrieveRelativePathsHtml(),
               responseDirPath + ipAddress.getHostName() + "-response" + "." + response.getResponseHeader().getContentType().getTextType());
 
       // In case of a get command retrieve the new page.

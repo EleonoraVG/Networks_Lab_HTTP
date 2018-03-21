@@ -20,13 +20,14 @@ public class HtmlProcessor {
   String htmlText;
   Document document;
 
-  public HtmlProcessor(String htmlPageContents){
+  public HtmlProcessor(String htmlPageContents) {
     htmlText = htmlPageContents;
     document = Jsoup.parse(htmlPageContents);
   }
 
   /**
    * Retrieve the location of images in the html page.
+   *
    * @return
    */
   public List<String> retrieveImageLocations() {
@@ -48,6 +49,7 @@ public class HtmlProcessor {
 
   /**
    * Retrieve the characterset specified in the htmlPage.
+   *
    * @return
    */
   public Charset retrieveCharSet() {
@@ -60,16 +62,17 @@ public class HtmlProcessor {
    *
    * @return The HTML text with all image paths made relative.
    */
-  public String retrieveRelativeImagePathsHtml(){
+  public String retrieveRelativePathsHtml() {
     Document copyDocument = document.clone();
     Elements images = copyDocument.getElementsByTag("img");
     Elements metaElements = copyDocument.getElementsByTag("meta");
 
+
     // Change all paths to a relative path
     for (Element imgElem : images) {
       String path = imgElem.attr("src");
-      if (Pattern.matches("/.*",path)){
-        imgElem.attr("src","." + path);
+      if (Pattern.matches("/.*", path)) {
+        imgElem.attr("src", "." + path);
       }
     }
 
@@ -78,11 +81,10 @@ public class HtmlProcessor {
       if (Objects.equals(itemProp, "image")) {
         String imgLoc = metaElem.attr("content");
         if (Pattern.matches("/.*", imgLoc)) {
-          metaElem.attr("content", "."+imgLoc);
+          metaElem.attr("content", "." + imgLoc);
         }
       }
     }
-
     return copyDocument.html();
   }
 }

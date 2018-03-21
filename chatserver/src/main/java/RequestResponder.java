@@ -25,10 +25,10 @@ public class RequestResponder implements Runnable {
   }
 
   public void run() {
+
+    System.out.println(serverResponse.getResponseHeader().getHeaderText());
+
     try {
-
-      System.out.println(serverResponse.getResponseHeader().getHeaderText());
-
       DataOutputStream outputStream = new DataOutputStream(clientSocket.getOutputStream());
 
       // Write to the clientSocket.
@@ -36,24 +36,28 @@ public class RequestResponder implements Runnable {
       outputStream.write(serverResponse.getContent());
       outputStream.writeByte('\r');
       outputStream.writeByte('\n');
+    } catch (IOException e) {
 
-      System.out.println(serverResponse.getResponseHeader());
+      System.out.println("error while writing to output socket, client closed the socket");
+      System.out.println(e.getMessage());
+      return;
+    }
+    System.out.println(serverResponse.getResponseHeader());
 
-      if (clientRequest != null) {
-        //Close the connection if HTTP/1.0
-        if (clientRequest.getRequestHeader().getVersion().equals(HTTPVersion.HTTP_1_0) || clientRequest.getRequestHeader().isConnectionClose())
+    if (clientRequest != null) {
+      //Close the connection if HTTP/1.0
+      if (clientRequest.getRequestHeader().getVersion().equals(HTTPVersion.HTTP_1_0) || clientRequest.getRequestHeader().isConnectionClose()) {
+        try {
           clientSocket.close();
-        else {
-          // Wait for more requests from the socket.
-          //TODO: Don't close connection for HTTP/1.1
-          //  clientSocket.close();
+        } catch (IOException e) {
+          e.printStackTrace();
         }
+      } else {
+        // Wait for more requests from the socket.
+        //TODO: Don't close connection for HTTP/1.1
+        //  clientSocket.close();
         threadPool.execute(new RequestHandler(clientSocket, threadPool));
       }
-    } catch (IOException e) {
-      System.out.println("error while writing to output socket.");
-      System.out.println(e.getMessage());
-
     }
   }
 }

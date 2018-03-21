@@ -11,6 +11,7 @@ public class RequestHeader {
   String contentType;
   private String transferEncoding = null;
   boolean connectionClose = false;
+  boolean connectionKeepAlive = false;
   String host;
   String requestText;
 
@@ -45,8 +46,11 @@ public class RequestHeader {
       } else if (Pattern.matches("transfer-encoding:.*", line.toLowerCase())) {
         transferEncoding = line.split(":")[1].trim();
       } else if (Pattern.matches("connection:.*", line.toLowerCase())) {
-        if (line.split(":")[1].trim().toLowerCase().equals("close")) {
+        String con = line.split(":")[1].trim().toLowerCase();
+        if (con.equals("close")) {
           connectionClose = true;
+        } else if (con.equals("keep-alive")) {
+          connectionKeepAlive = true;
         }
       }
     }
@@ -85,6 +89,10 @@ public class RequestHeader {
 
   public boolean isConnectionClose() {
     return connectionClose;
+  }
+
+  public boolean isConnectionKeepAlive() {
+    return connectionKeepAlive;
   }
 
   public String getRequestText() {
