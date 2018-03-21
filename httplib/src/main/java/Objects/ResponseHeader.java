@@ -21,7 +21,7 @@ public class ResponseHeader {
   private ContentType contentType;
   private HTTPVersion version;
 
-  private ResponseHeader(List<String> headerTextList) {
+  public ResponseHeader(List<String> headerTextList) {
     headerText = createHeaderText(headerTextList);
   }
 

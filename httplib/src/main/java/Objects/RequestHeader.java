@@ -52,7 +52,6 @@ public class RequestHeader {
     }
     StringBuilder builder = new StringBuilder();
     builder.append(requestText);
-    //requestText.forEach(x -> builder.append(x));
     this.requestText = builder.toString();
   }
 
