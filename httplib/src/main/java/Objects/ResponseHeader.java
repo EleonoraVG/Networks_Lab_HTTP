@@ -36,10 +36,11 @@ public class ResponseHeader {
       headerTextBuilder.append(ENDOFLINE);
 
       // extract information from the line.
-      if (Pattern.matches("HTTP/.*", line)) {
-        statusCode = StatusCode.getStatusCodeForInt(Integer.parseInt(line.split(SPACE)[1]));
-        String[] elements = line.split(" ");
-        String httpVersionLine = elements[1].trim();
+      if (Pattern.matches("HTTP/.*", line.toUpperCase())) {
+        String[] elements = line.split(SPACE);
+        statusCode = StatusCode.getStatusCodeForInt(Integer.parseInt(elements[1]));
+
+        String httpVersionLine = elements[0].trim();
         if (httpVersionLine.equals(HTTPVersion.HTTP_1_0.toString())) {
           version = HTTPVersion.HTTP_1_0;
         } else {

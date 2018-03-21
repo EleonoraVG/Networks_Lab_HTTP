@@ -39,10 +39,7 @@ public class RequestResponder implements Runnable {
 
       System.out.println(serverResponse.getResponseHeader());
 
-      // Close the socket on 500 response code
-      if (clientRequest == null) {
-        clientSocket.close();
-      } else {
+      if (clientRequest != null) {
         //Close the connection if HTTP/1.0
         if (clientRequest.getRequestHeader().getVersion().equals(HTTPVersion.HTTP_1_0) || clientRequest.getRequestHeader().isConnectionClose())
           clientSocket.close();
@@ -50,8 +47,8 @@ public class RequestResponder implements Runnable {
           // Wait for more requests from the socket.
           //TODO: Don't close connection for HTTP/1.1
           //  clientSocket.close();
-          threadPool.execute(new RequestHandler(clientSocket, threadPool));
         }
+        threadPool.execute(new RequestHandler(clientSocket, threadPool));
       }
     } catch (IOException e) {
       System.out.println("error while writing to output socket.");

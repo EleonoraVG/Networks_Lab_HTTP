@@ -12,10 +12,10 @@ public class ContentType {
 
   public ContentType(String text) {
     contentTypeText = text;
-    if (Pattern.matches("text/.*", contentTypeText)) {
+    if (Pattern.matches("text/.*", contentTypeText.toLowerCase())) {
       textType = contentTypeText.split("/")[1].trim();
       imageType = null;
-    } else if (Pattern.matches("image/.*", contentTypeText)) {
+    } else if (Pattern.matches("image/.*", contentTypeText.toLowerCase())) {
       imageType = contentTypeText.split("/")[1].trim();
       textType = null;
     } else {

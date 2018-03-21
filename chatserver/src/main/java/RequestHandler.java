@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
+import static Constants.HTTPConstants.ENDOFLINE;
 import static Constants.HTTPConstants.SPACE;
 import static Helpers.HTTPReader.readHeader;
 
@@ -38,8 +39,8 @@ public class RequestHandler implements Runnable {
   public void run() {
 
     try {
-      // The client socket waits 10 seconds for an action.
-      clientSocket.setSoTimeout(10000);
+      // The client socket waits 15 seconds for an action.
+      clientSocket.setSoTimeout(15000);
 
       DataInputStream inFromClient = new DataInputStream(clientSocket.getInputStream());
       ClientRequest.Builder requestBuilder = ClientRequest.newBuilder();
@@ -91,9 +92,9 @@ public class RequestHandler implements Runnable {
       String path = clientRequest.getRequestHeader().getPath();
       if (path == null || path.equals("/") || path.equals(SPACE)) {
         // Retrieve the starting page
-        path = serverDir + websiteDir + "/" + startFilePath;
+        path = serverDir + "/" + websiteDir + "/" + startFilePath;
       } else {
-        path = serverDir + path;
+        path = serverDir + "/" + path;
       }
 
       try {
@@ -137,11 +138,17 @@ public class RequestHandler implements Runnable {
     }
   }
 
+  //TODO
+  private ServerResponse create302Response() {
+    return null;
+  }
+
   private ServerResponse create400Response() {
     List<String> header = new ArrayList<>();
     header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_400.toString());
     header.add("Content-Length:" + SPACE + 0);
     header.add(createDateHeaderLine());
+    header.add(ENDOFLINE);
     return new ServerResponse(new ResponseHeader(header), new byte[]{});
   }
 
@@ -150,6 +157,7 @@ public class RequestHandler implements Runnable {
     header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
     header.add("Content-Length:" + SPACE + 0);
     header.add(createDateHeaderLine());
+    header.add(ENDOFLINE);
     return new ServerResponse(new ResponseHeader(header), new byte[]{});
   }
 
@@ -158,6 +166,7 @@ public class RequestHandler implements Runnable {
     header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_500.toString());
     header.add("Content-Length:" + SPACE + 0);
     header.add(createDateHeaderLine());
+    header.add(ENDOFLINE);
     return new ServerResponse(new ResponseHeader(header), new byte[]{});
   }
 

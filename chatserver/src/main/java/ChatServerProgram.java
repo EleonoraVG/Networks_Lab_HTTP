@@ -15,10 +15,7 @@ public class ChatServerProgram {
 
   //TODO: Print response.
   //TODO: Support if-modified-since header!
-  //TODO: Check for the HTTP/1.1 host field
   //TODO: Support the status codes.
   //TODO: Send the following to the client
-    // date
     // content-type
-    // content-length
 }
