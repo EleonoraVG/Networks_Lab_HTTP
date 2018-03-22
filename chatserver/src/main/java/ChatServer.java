@@ -10,6 +10,11 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * Create the thread pool and start the listener thread.
+ * <p>
+ * This is what initiates the chat server program.
+ */
 public class ChatServer {
   private int defaultThreadPoolSize = 30;
   private int port = 80;
