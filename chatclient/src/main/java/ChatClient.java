@@ -68,7 +68,6 @@ public class ChatClient {
       response = executeCommandHTTP10(createRequest(command, "http://" + ipAddress.getHostName() + "/"));
     }
 
-    //TODO: Support other types
     // The first response should be text.
     if (response.isText()) {
 

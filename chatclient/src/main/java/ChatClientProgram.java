@@ -5,7 +5,6 @@ import org.apache.commons.cli.*;
 
 public class ChatClientProgram {
 
-  //TODO: Support multiple spaces or tabs!!
   public static void main(String[] args) throws Exception {
     // The client needs at least 3 arguments.
     Preconditions.checkArgument(args.length >= 3);

@@ -9,7 +9,7 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 
 /**
- *
+ * A runnable for writing a response to the client socket.
  */
 public class RequestResponder implements Runnable {
 

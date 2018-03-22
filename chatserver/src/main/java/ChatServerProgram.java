@@ -6,9 +6,4 @@ public class ChatServerProgram {
       ChatServer chatServer = new ChatServer();
       chatServer.run();
   }
-
-  // THESE ARE TODOS FOR THE ASSIGNMENT
-
-  //TODO: Send the following to the client
-    // content-type
 }
