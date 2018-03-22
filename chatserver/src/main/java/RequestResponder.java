@@ -1,3 +1,4 @@
+import Constants.HTTPConstants;
 import Objects.ClientRequest;
 import Objects.HTTPVersion;
 import Objects.ServerResponse;
@@ -34,8 +35,8 @@ public class RequestResponder implements Runnable {
       // Write to the clientSocket.
       outputStream.writeBytes(serverResponse.getResponseHeader().getHeaderText());
       outputStream.write(serverResponse.getContent());
-      outputStream.writeByte('\r');
-      outputStream.writeByte('\n');
+      outputStream.writeByte(HTTPConstants.CR);
+      outputStream.writeByte(HTTPConstants.LF);
     } catch (IOException e) {
 
       System.out.println("error while writing to output socket, client closed the socket");

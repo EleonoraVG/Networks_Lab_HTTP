@@ -139,7 +139,7 @@ public class RequestHandler implements Runnable {
       headerStrings.add("Content-length:" + SPACE + content.length);
       System.out.println("clientRequest:" + SPACE + clientRequest.getRequestHeader().getRequestText());
       System.out.println("Not a get request");
-      return new ServerResponse(new ResponseHeader(headerStrings), new byte[]{});
+      return new ServerResponse(new ResponseHeader(headerStrings), content);
     }
   }
 
@@ -151,31 +151,31 @@ public class RequestHandler implements Runnable {
   private ServerResponse create400Response() {
     List<String> header = new ArrayList<>();
     header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_400.toString());
-    header.add("Content-Length:" + SPACE + 0);
+    header.add("Content-Length:" + SPACE + 1);
     header.add("Host:" + SPACE + hostName);
     header.add(createDateHeaderLine());
     header.add(ENDOFLINE);
-    return new ServerResponse(new ResponseHeader(header), new byte[]{});
+    return new ServerResponse(new ResponseHeader(header), new byte[]{1});
   }
 
   private ServerResponse create404Response() {
     List<String> header = new ArrayList<>();
     header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
-    header.add("Content-Length:" + SPACE + 0);
+    header.add("Content-Length:" + SPACE + 1);
     header.add("Host:" + SPACE + hostName);
     header.add(createDateHeaderLine());
     header.add(ENDOFLINE);
-    return new ServerResponse(new ResponseHeader(header), new byte[]{});
+    return new ServerResponse(new ResponseHeader(header), new byte[]{1});
   }
 
   private ServerResponse create500Response() {
     List<String> header = new ArrayList<>();
     header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_500.toString());
-    header.add("Content-Length:" + SPACE + 0);
+    header.add("Content-Length:" + SPACE + 1);
     header.add("Host:" + SPACE + hostName);
     header.add(createDateHeaderLine());
     header.add(ENDOFLINE);
-    return new ServerResponse(new ResponseHeader(header), new byte[]{});
+    return new ServerResponse(new ResponseHeader(header), new byte[]{1});
   }
 
   private String createDateHeaderLine() {
