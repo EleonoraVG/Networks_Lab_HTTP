@@ -13,10 +13,10 @@ import java.util.concurrent.ExecutorService;
  */
 public class RequestResponder implements Runnable {
 
-  ServerResponse serverResponse;
-  Socket clientSocket;
-  ClientRequest clientRequest;
-  ExecutorService threadPool;
+  private ServerResponse serverResponse;
+  private Socket clientSocket;
+  private ClientRequest clientRequest;
+  private ExecutorService threadPool;
 
   public RequestResponder(ServerResponse serverResponse, ClientRequest clientRequest, Socket socket, ExecutorService threadPool) {
     this.serverResponse = serverResponse;
@@ -39,8 +39,8 @@ public class RequestResponder implements Runnable {
       outputStream.writeByte(HTTPConstants.LF);
     } catch (IOException e) {
 
-      System.out.println("error while writing to output socket, client closed the socket");
-      System.out.println(e.getMessage());
+      // Happens if the socket has been closed.
+      // Either by the client or by the timeout.
       return;
     }
     System.out.println(serverResponse.getResponseHeader());

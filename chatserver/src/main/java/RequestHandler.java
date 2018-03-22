@@ -39,7 +39,7 @@ public class RequestHandler implements Runnable {
   private Socket clientSocket;
   private ExecutorService threadPool;
 
-  public RequestHandler(Socket clientSocket, ExecutorService threadPool) {
+  RequestHandler(Socket clientSocket, ExecutorService threadPool) {
     this.clientSocket = clientSocket;
     this.threadPool = threadPool;
   }

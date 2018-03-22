@@ -12,10 +12,10 @@ import java.util.concurrent.ExecutorService;
  */
 public class ConnectionListener implements Runnable {
 
-  ServerSocket serverSocket;
-  ExecutorService threadPool;
+  private ServerSocket serverSocket;
+  private ExecutorService threadPool;
 
-  public ConnectionListener(ServerSocket socket, ExecutorService threadPool) {
+  ConnectionListener(ServerSocket socket, ExecutorService threadPool) {
     this.serverSocket = socket;
     this.threadPool = threadPool;
   }
