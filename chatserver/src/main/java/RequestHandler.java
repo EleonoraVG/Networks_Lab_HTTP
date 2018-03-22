@@ -132,6 +132,7 @@ public class RequestHandler implements Runnable {
         return create404Response();
       }
 
+      // Check for if-modified-since.
       ZonedDateTime lastModified = FileProcessor.getLastModified(path);
       ZonedDateTime ifLastModified = clientRequest.getRequestHeader().getIfModifiedSince();
       if (ifLastModified != null && lastModified.isBefore(ifLastModified)) {
@@ -141,9 +142,19 @@ public class RequestHandler implements Runnable {
       headerStrings.add("Content-Length:" + SPACE + content.length);
 
       String[] splitPath = path.split("\\.");
-      headerStrings.add(
-              "Content-Type:" + SPACE + "text/" + splitPath[splitPath.length - 1].trim() + ";"
-                      + SPACE + "charset=" + Charset.defaultCharset().toString().toLowerCase());
+      String contentType = splitPath[splitPath.length - 1].trim();
+      String contentCategory = "text";
+      if (contentType.equals("png") || contentType.equals("jpg") || contentType.equals("gif")) {
+        contentCategory = "image";
+      }
+
+      String contentString =
+              "Content-Type:" + SPACE + contentCategory + "/" + contentType;
+      if (contentCategory.equals("text")) {
+        contentString += SPACE + "charset=" + Charset.defaultCharset().toString().toLowerCase();
+      }
+
+      headerStrings.add(contentString);
 
       return new ServerResponse(new ResponseHeader(headerStrings), content);
 
