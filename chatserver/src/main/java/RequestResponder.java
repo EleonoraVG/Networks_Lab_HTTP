@@ -55,8 +55,6 @@ public class RequestResponder implements Runnable {
         }
       } else {
         // Wait for more requests from the socket.
-        //TODO: Don't close connection for HTTP/1.1
-        //  clientSocket.close();
         threadPool.execute(new RequestHandler(clientSocket, threadPool));
       }
     }

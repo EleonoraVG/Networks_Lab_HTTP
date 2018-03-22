@@ -13,7 +13,6 @@ public class ChatServerProgram {
 
   // THESE ARE TODOS FOR THE ASSIGNMENT
 
-  //TODO: Print response.
   //TODO: Support if-modified-since header!
   //TODO: Support the status codes.
   //TODO: Send the following to the client

@@ -1,5 +1,12 @@
 package Objects;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -14,6 +21,7 @@ public class RequestHeader {
   boolean connectionKeepAlive = false;
   String host;
   String requestText;
+  ZonedDateTime ifModifiedSince;
 
 
   public boolean RequestHasMessageBody() {
@@ -45,6 +53,15 @@ public class RequestHeader {
         contentType = line.split(":")[1].trim();
       } else if (Pattern.matches("transfer-encoding:.*", line.toLowerCase())) {
         transferEncoding = line.split(":")[1].trim();
+      } else if (Pattern.matches("if-modified-since:.*", line.trim().toLowerCase())) {
+        DateFormat format = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss");
+        String modIf = line.split(":")[1].trim();
+        try {
+          Date date = format.parse(modIf);
+          ifModifiedSince = ZonedDateTime.ofInstant(Instant.ofEpochMilli(date.getTime()), ZoneId.of("GMT"));
+        } catch (ParseException e) {
+          System.out.println("error while parsing date!");
+        }
       } else if (Pattern.matches("connection:.*", line.toLowerCase())) {
         String con = line.split(":")[1].trim().toLowerCase();
         if (con.equals("close")) {
@@ -54,6 +71,7 @@ public class RequestHeader {
         }
       }
     }
+
     StringBuilder builder = new StringBuilder();
     builder.append(requestText);
     this.requestText = builder.toString();
@@ -97,5 +115,9 @@ public class RequestHeader {
 
   public String getRequestText() {
     return requestText;
+  }
+
+  public ZonedDateTime getIfModifiedSince() {
+    return ifModifiedSince;
   }
 }

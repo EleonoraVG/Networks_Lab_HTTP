@@ -8,7 +8,11 @@ import java.net.Socket;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -31,6 +35,7 @@ public class RequestHandler implements Runnable {
   private static final String clientInputsDir = "clientInputs";
   private static final String hostName = "eleonora";
 
+  private HTTPVersion httpVersion = HTTPVersion.HTTP_1_1;
   private Socket clientSocket;
   private ExecutorService threadPool;
 
@@ -89,6 +94,7 @@ public class RequestHandler implements Runnable {
 
     List<String> headerStrings = new ArrayList<>();
     byte[] content = new byte[]{};
+    httpVersion = clientRequest.getRequestHeader().getVersion();
 
     System.out.println(clientRequest.getRequestHeader().getRequestText());
 
@@ -117,10 +123,19 @@ public class RequestHandler implements Runnable {
         path = serverDir + "/" + path;
       }
 
+      // Retrieve content.
       try {
         content = retrieveContentFromFile(path);
       } catch (IOException e) {
+
+        // Page not found
         return create404Response();
+      }
+
+      ZonedDateTime lastModified = FileProcessor.getLastModified(path);
+      ZonedDateTime ifLastModified = clientRequest.getRequestHeader().getIfModifiedSince();
+      if (ifLastModified != null && lastModified.isBefore(ifLastModified)) {
+        return create304Response();
       }
 
       headerStrings.add("Content-Length:" + SPACE + content.length);
@@ -131,9 +146,12 @@ public class RequestHandler implements Runnable {
                       + SPACE + "charset=" + Charset.defaultCharset().toString().toLowerCase());
 
       return new ServerResponse(new ResponseHeader(headerStrings), content);
+
+      // Process a HEAD request.
     } else if (clientRequest.getRequestHeader().getCommand().equals(HTTPCommand.HEAD)) {
       return new ServerResponse(new ResponseHeader(headerStrings), content);
 
+      // Process a PUT request.
     } else if (clientRequest.getRequestHeader().getCommand().equals(HTTPCommand.PUT)) {
       try {
 
@@ -142,6 +160,8 @@ public class RequestHandler implements Runnable {
         return create404Response();
       }
       return new ServerResponse(new ResponseHeader(headerStrings), content);
+
+      // Process a POST request.
     } else if (clientRequest.getRequestHeader().getCommand() == HTTPCommand.POST) {
       try {
         FileProcessor.appendToFile(clientRequest.getContent(), serverDir + clientInputsDir + clientRequest.getRequestHeader().getPath());
@@ -151,22 +171,25 @@ public class RequestHandler implements Runnable {
       return new ServerResponse(new ResponseHeader(headerStrings), content);
 
     } else {
-      headerStrings.add("Content-length:" + SPACE + content.length);
-      System.out.println("clientRequest:" + SPACE + clientRequest.getRequestHeader().getRequestText());
-      System.out.println("Not a get request");
-      return new ServerResponse(new ResponseHeader(headerStrings), content);
+      // Unsupported command
+      return create500Response();
     }
   }
 
-  //TODO
-  private ServerResponse create302Response() {
-    return null;
+  private ServerResponse create304Response() {
+    List<String> header = new ArrayList<>();
+    byte[] content = "304 error".getBytes();
+    header.add(httpVersion.toString() + SPACE + StatusCode.STATUS_CODE_400.toString());
+    header.add("Content-Length:" + SPACE + content.length);
+    header.add("Host:" + SPACE + hostName);
+    header.add(createDateHeaderLine());
+    return new ServerResponse(new ResponseHeader(header), content);
   }
 
   private ServerResponse create400Response() {
     List<String> header = new ArrayList<>();
     byte[] content = "400 error".getBytes();
-    header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_400.toString());
+    header.add(httpVersion.toString() + SPACE + StatusCode.STATUS_CODE_400.toString());
     header.add("Content-Length:" + SPACE + content.length);
     header.add("Host:" + SPACE + hostName);
     header.add(createDateHeaderLine());
@@ -176,7 +199,7 @@ public class RequestHandler implements Runnable {
   private ServerResponse create404Response() {
     List<String> header = new ArrayList<>();
     byte[] content = "404 error".getBytes();
-    header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
+    header.add(httpVersion.toString() + SPACE + StatusCode.STATUS_CODE_404.toString());
     header.add("Content-Length:" + SPACE + content.length);
     header.add("Host:" + SPACE + hostName);
     header.add(createDateHeaderLine());
@@ -186,7 +209,7 @@ public class RequestHandler implements Runnable {
   private ServerResponse create500Response() {
     List<String> header = new ArrayList<>();
     byte[] content = "500 error".getBytes();
-    header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_500.toString());
+    header.add(httpVersion.toString() + SPACE + StatusCode.STATUS_CODE_500.toString());
     header.add("Content-Length:" + SPACE + content.length);
     header.add("Host:" + SPACE + hostName);
     header.add(createDateHeaderLine());
@@ -210,7 +233,6 @@ public class RequestHandler implements Runnable {
    */
   private String formatDateInImfFixDate(ZonedDateTime dateTime) {
     String dayOfTheWeek = dateTime.getDayOfWeek().name();
-
     return dayOfTheWeek.substring(0, 1) + dayOfTheWeek.substring(1, 3).toLowerCase() + "," + SPACE
             + dateTime.getDayOfMonth() + SPACE
             + dateTime.getMonth().name().substring(0, 1)
@@ -241,7 +263,7 @@ public class RequestHandler implements Runnable {
       if (header.getHost() == null) {
         return false;
       }
-      if (header.getContentLength() == null && header.getTransferEncoding() == null) {
+      if (header.RequestHasMessageBody() && header.getContentLength() == null && header.getTransferEncoding() == null) {
         return false;
       }
     }

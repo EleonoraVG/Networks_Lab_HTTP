@@ -10,11 +10,15 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 public class FileProcessor {
   /**
    * Create a file at the given location,
    * If the directory for the file does not exist then it will be created
+   *
    * @param filePath
    * @return
    */
@@ -28,13 +32,14 @@ public class FileProcessor {
   /**
    * Append to an existing file.
    */
-  public static void appendToFile(byte[] content, String existingFilePath) throws IOException{
-   java.nio.file.Files.write(Paths.get(existingFilePath),content, StandardOpenOption.APPEND);
+  public static void appendToFile(byte[] content, String existingFilePath) throws IOException {
+    java.nio.file.Files.write(Paths.get(existingFilePath), content, StandardOpenOption.APPEND);
   }
 
   /**
    * Write the byte contents to a file at the given location.
    * Create new directories if necessary.
+   *
    * @param content
    * @param filePath
    * @throws IOException
@@ -47,6 +52,7 @@ public class FileProcessor {
   /**
    * Write the String to a file at the given location.
    * Create new directories if necessary.
+   *
    * @param content
    * @param filePath
    */
@@ -57,6 +63,7 @@ public class FileProcessor {
 
   /**
    * Write String contents to a given file.
+   *
    * @param content
    * @param file
    */
@@ -73,6 +80,7 @@ public class FileProcessor {
 
   /**
    * Write an image to file using the imageIO write.
+   *
    * @param image
    * @param imageType
    * @param path
@@ -80,5 +88,10 @@ public class FileProcessor {
    */
   public static void writeImageToFile(BufferedImage image, String imageType, String path) throws IOException {
     ImageIO.write(image, imageType, createFileWithDirs(path));
+  }
+
+  public static ZonedDateTime getLastModified(String path) {
+    long lastMod = new File(path).lastModified();
+    return ZonedDateTime.ofInstant(Instant.ofEpochMilli(lastMod), ZoneId.of("GMT"));
   }
 }
