@@ -1,7 +1,6 @@
 package Helpers;
 
 import Objects.RequestHeader;
-import Objects.ServerResponse.ResponseHeader;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -123,5 +122,27 @@ public abstract class HTTPReader {
     byteArrayOutputStream.flush();
     byteArrayOutputStream.close();
     return byteArrayOutputStream.toByteArray();
+  }
+
+  /**
+   * Read in a request header from the client
+   * @param inFromClient the data input stream from the client.
+   * @return a request header
+   * @throws IOException
+   */
+   public static RequestHeader readRequestHeader(DataInputStream inFromClient) throws IOException {
+    return new RequestHeader(readHeader(inFromClient));
+  }
+
+  public static byte[] retrieveContentInRequest(RequestHeader header, DataInputStream inFromClient) throws IOException {
+    byte[] content = null;
+    if (header.getContentLength() != null) {
+      content = HTTPReader.processWithContentLength(inFromClient, header.getContentLength());
+    } else if (header.getTransferEncoding() != null) {
+
+      //Use transfer encoding
+      content = HTTPReader.readChunkFromServer(inFromClient, Charset.defaultCharset());
+    }
+    return content;
   }
 }

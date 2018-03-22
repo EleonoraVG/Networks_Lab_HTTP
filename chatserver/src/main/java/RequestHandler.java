@@ -16,6 +16,8 @@ import java.util.concurrent.ExecutorService;
 import static Constants.HTTPConstants.ENDOFLINE;
 import static Constants.HTTPConstants.SPACE;
 import static Helpers.HTTPReader.readHeader;
+import static Helpers.HTTPReader.readRequestHeader;
+import static Helpers.HTTPReader.retrieveContentInRequest;
 
 /**
  * Handle incoming requests to the server, by processing of the request header and creating a response.
@@ -32,7 +34,6 @@ public class RequestHandler implements Runnable {
   private Socket clientSocket;
   private ExecutorService threadPool;
 
-
   public RequestHandler(Socket clientSocket, ExecutorService threadPool) {
     this.clientSocket = clientSocket;
     this.threadPool = threadPool;
@@ -41,7 +42,8 @@ public class RequestHandler implements Runnable {
   public void run() {
 
     try {
-      // The client socket waits 15 seconds for an action.
+
+      // The client socket waits 15 seconds for an action to occur.
       clientSocket.setSoTimeout(15000);
 
       DataInputStream inFromClient = new DataInputStream(clientSocket.getInputStream());
@@ -52,6 +54,8 @@ public class RequestHandler implements Runnable {
       requestBuilder.setRequestHeader(header);
 
       if (header.isConnectionKeepAlive()) {
+        // Keep the socket open if the keep alive header
+        // is included in the client request.
         clientSocket.setSoTimeout(0);
       }
 
@@ -59,7 +63,7 @@ public class RequestHandler implements Runnable {
         requestBuilder.setContent(retrieveContentInRequest(header, inFromClient));
       }
 
-      // Make sure the client has finished sending the request.
+      // Make sure all bytes are read from the inputStream.
       while (inFromClient.available() != 0) inFromClient.read();
 
       ClientRequest request = requestBuilder.build();
@@ -68,11 +72,19 @@ public class RequestHandler implements Runnable {
 
       // Schedule a new task for responding to the client over the socket.
       threadPool.execute(new RequestResponder(serverResponse, request, clientSocket, threadPool));
+
     } catch (Exception e) {
+      // If any exception occurred that was not already caught the return the 500 server response.
       threadPool.execute(new RequestResponder(create500Response(), null, clientSocket, threadPool));
     }
   }
 
+  /**
+   * Create a response to the client request.
+   *
+   * @param clientRequest the client request
+   * @return a ServerResponse
+   */
   private ServerResponse createResponse(ClientRequest clientRequest) {
 
     List<String> headerStrings = new ArrayList<>();
@@ -96,9 +108,12 @@ public class RequestHandler implements Runnable {
 
       String path = clientRequest.getRequestHeader().getPath();
       if (path == null || path.equals("/") || path.equals(SPACE)) {
+
         // Retrieve the starting page
         path = serverDir + "/" + websiteDir + "/" + startFilePath;
       } else {
+
+        // Retrieve the page at the given path.
         path = serverDir + "/" + path;
       }
 
@@ -150,38 +165,49 @@ public class RequestHandler implements Runnable {
 
   private ServerResponse create400Response() {
     List<String> header = new ArrayList<>();
+    byte[] content = "400 error".getBytes();
     header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_400.toString());
-    header.add("Content-Length:" + SPACE + 1);
+    header.add("Content-Length:" + SPACE + content.length);
     header.add("Host:" + SPACE + hostName);
     header.add(createDateHeaderLine());
-    header.add(ENDOFLINE);
-    return new ServerResponse(new ResponseHeader(header), new byte[]{1});
+    return new ServerResponse(new ResponseHeader(header), content);
   }
 
   private ServerResponse create404Response() {
     List<String> header = new ArrayList<>();
+    byte[] content = "404 error".getBytes();
     header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_404.toString());
-    header.add("Content-Length:" + SPACE + 1);
+    header.add("Content-Length:" + SPACE + content.length);
     header.add("Host:" + SPACE + hostName);
     header.add(createDateHeaderLine());
-    header.add(ENDOFLINE);
-    return new ServerResponse(new ResponseHeader(header), new byte[]{1});
+    return new ServerResponse(new ResponseHeader(header), content);
   }
 
   private ServerResponse create500Response() {
     List<String> header = new ArrayList<>();
+    byte[] content = "500 error".getBytes();
     header.add("HTTP/1.1" + SPACE + StatusCode.STATUS_CODE_500.toString());
-    header.add("Content-Length:" + SPACE + 1);
+    header.add("Content-Length:" + SPACE + content.length);
     header.add("Host:" + SPACE + hostName);
     header.add(createDateHeaderLine());
-    header.add(ENDOFLINE);
-    return new ServerResponse(new ResponseHeader(header), new byte[]{1});
+    return new ServerResponse(new ResponseHeader(header), content);
   }
 
+  /**
+   * Create the date line for the header.
+   *
+   * @return The string for the date line
+   */
   private String createDateHeaderLine() {
     return "Date:" + SPACE + formatDateInImfFixDate(Instant.now().atZone(ZoneId.of("GMT")));
   }
 
+  /**
+   * Return the date in IMF format.
+   *
+   * @param dateTime the datetime in GMT.
+   * @return A string with the date in IMF format.
+   */
   private String formatDateInImfFixDate(ZonedDateTime dateTime) {
     String dayOfTheWeek = dateTime.getDayOfWeek().name();
 
@@ -200,18 +226,12 @@ public class RequestHandler implements Runnable {
     return Files.readAllBytes(Paths.get(path));
   }
 
-  private byte[] retrieveContentInRequest(RequestHeader header, DataInputStream inFromClient) throws IOException {
-    byte[] content = null;
-    if (header.getContentLength() != null) {
-      content = HTTPReader.processWithContentLength(inFromClient, header.getContentLength());
-    } else if (header.getTransferEncoding() != null) {
-
-      //Use transfer encoding
-      content = HTTPReader.readChunkFromServer(inFromClient, Charset.defaultCharset());
-    }
-    return content;
-  }
-
+  /**
+   * Check is the requestHeader is valid.
+   *
+   * @param header
+   * @return true if a valid header, false otherwise
+   */
   private boolean isValidRequestHeader(RequestHeader header) {
     if (header.getVersion() == null || header.getCommand() == null || header.getPath() == null) {
       return false;
@@ -221,15 +241,10 @@ public class RequestHandler implements Runnable {
       if (header.getHost() == null) {
         return false;
       }
-      if (header.RequestHasMessageBody() && header.getContentLength() == null && header.getTransferEncoding() == null) {
+      if (header.getContentLength() == null && header.getTransferEncoding() == null) {
         return false;
       }
     }
     return true;
-  }
-
-
-  public static RequestHeader readRequestHeader(DataInputStream inFromClient) throws IOException {
-    return new RequestHeader(readHeader(inFromClient));
   }
 }

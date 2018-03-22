@@ -13,7 +13,7 @@ public class ChatClientProgram {
     // Check for the HTTP/1.0 flag option.
     Options options = new Options();
 
-    Option http10 = new Option("10","http10", false, "Use HTTP/1.0 for the chatClient.");
+    Option http10 = new Option("10", "http10", false, "Use HTTP/1.0 for the chatClient.");
     http10.setRequired(false);
     options.addOption(http10);
 
@@ -26,7 +26,7 @@ public class ChatClientProgram {
     String url = args[1];
     int port = Integer.parseInt(args[2]);
 
-    //Build and run chatClient
+    //Build and run chatClient with HTTP/1.0
     ChatClient chatClient;
     if (useHttp10) {
       chatClient = ChatClient.newBuilder()
@@ -38,6 +38,7 @@ public class ChatClientProgram {
       chatClient = ChatClient.newBuilder()
               .setIpAddress(url)
               .setPort(port)
+              .setHTTPVersion(HTTPVersion.HTTP_1_1)
               .build();
     }
     chatClient.runAndSaveResult(httpCommand);

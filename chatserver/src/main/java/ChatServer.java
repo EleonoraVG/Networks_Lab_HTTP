@@ -12,7 +12,7 @@ import java.util.concurrent.Executors;
 
 public class ChatServer {
   private int defaultQueueSize = 50;
-  private int defaultThreadPoolSize = 20;
+  private int defaultThreadPoolSize = 30;
   private int port = 80;
   private InetAddress hostAddress;
   private ServerSocket serverSocket;
@@ -30,9 +30,6 @@ public class ChatServer {
     Thread connectionListener = new Thread(new ConnectionListener(serverSocket, threadPool));
     connectionListener.start();
 
-
-    // Shut down the thread pool
-    //threadPool.shutdown();
   }
 
   public ServerSocket startServerSocket(InetAddress ipAddress, int port) throws IOException {
