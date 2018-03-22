@@ -65,7 +65,7 @@ public class ChatClient {
       response = writeCommandToServer(inFromServer, outToServer, createRequest(command, ipAddress.getHostName() + "/"));
     } else {
       // Create a new connection for every command in case of HTTP/1.0
-      response = executeCommandHTTP10(createRequest(command, "http://" + ipAddress.getHostName() + "/"));
+      response = executeCommandHTTP10(createRequest(command, ipAddress.getHostName() + "/"));
     }
 
     // The first response should be text.
@@ -200,9 +200,13 @@ public class ChatClient {
     } else if (responseHeader.getContentLength() != null) {
 
       // read from server for given length.
-      response = processWithContentLength(inFromServer, responseHeader.getContentLength());
-      contentBytesStream.write(response);
-    } else {
+      if (!commandString.trim().startsWith(HTTPCommand.HEAD.toString())) {
+        response = processWithContentLength(inFromServer, responseHeader.getContentLength());
+        contentBytesStream.write(response);
+      }
+    } else
+
+    {
 
       // Use in case of HTTP/1.0
       byte[] line = HTTPReader.readOneLine(inFromServer);
@@ -210,17 +214,20 @@ public class ChatClient {
         contentBytesStream.write(line);
         line = readOneLine(inFromServer);
       }
-
     }
 
     // Clear out the in from server data stream and close the bytes stream.
-    while (inFromServer.available() != 0) {
+    while (inFromServer.available() != 0)
+
+    {
       readOneLine(inFromServer);
     }
     contentBytesStream.flush();
     contentBytesStream.close();
 
-    return new ServerResponse(responseHeader, contentBytesStream.toByteArray());
+    return new
+
+            ServerResponse(responseHeader, contentBytesStream.toByteArray());
   }
 
   /**
