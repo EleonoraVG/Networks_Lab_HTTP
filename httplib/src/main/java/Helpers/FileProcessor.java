@@ -1,7 +1,6 @@
 package Helpers;
 
 import com.google.common.io.Files;
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;

@@ -27,14 +27,20 @@ public class ServerResponse {
     return content;
   }
 
+  public String getTextType() {
+    if (responseHeader.getContentType() == null) {
+      return "html";
+    } else return responseHeader.getContentType().getTextType();
+  }
+
   public boolean isText() {
-    return responseHeader.getContentType().isText();
+    return responseHeader.getContentType() == null || responseHeader.getContentType().isText();
   }
 
   public boolean isImage() {
     if (responseHeader.getContentType() == null) {
       return false;
     }
-    return responseHeader.getContentType().isImage();
+    return responseHeader.getContentType() != null && responseHeader.getContentType().isImage();
   }
 }

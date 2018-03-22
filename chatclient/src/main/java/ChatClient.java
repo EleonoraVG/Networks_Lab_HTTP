@@ -65,7 +65,7 @@ public class ChatClient {
       response = writeCommandToServer(inFromServer, outToServer, createRequest(command, ipAddress.getHostName() + "/"));
     } else {
       // Create a new connection for every command in case of HTTP/1.0
-      response = executeCommandHTTP10(createRequest(command, ipAddress.getHostName() + "/"));
+      response = executeCommandHTTP10(createRequest(command, "http://" + ipAddress.getHostName() + "/"));
     }
 
     //TODO: Support other types
@@ -84,7 +84,7 @@ public class ChatClient {
 
       // Write the HTML text to file.
       FileProcessor.writeToFile(htmlProcessor.retrieveRelativePathsHtml(),
-              responseDirPath + ipAddress.getHostName() + "-response" + "." + response.getResponseHeader().getContentType().getTextType());
+              responseDirPath + ipAddress.getHostName() + "-response" + "." + response.getTextType());
 
       // In case of a get command retrieve the new page.
       if (command.equals(HTTPCommand.GET)) {
@@ -110,7 +110,7 @@ public class ChatClient {
 
           // Write the image to file.
           if (!response.isImage()) {
-            throw new IllegalStateException("The responseHeader does not indicate this as an image.");
+            System.out.println(response.getResponseHeader().getHeaderText());
           } else {
             // Process the image contents
             BufferedImage image = ImageIO.read(new ByteArrayInputStream(response.getContent()));
