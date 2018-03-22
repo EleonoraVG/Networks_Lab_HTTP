@@ -97,7 +97,7 @@ public class ResponseHeader {
 
   public Charset getCharSet() {
     if (charSet == null) {
-      return StandardCharsets.UTF_8;
+      return StandardCharsets.ISO_8859_1;
     }
     return charSet;
   }

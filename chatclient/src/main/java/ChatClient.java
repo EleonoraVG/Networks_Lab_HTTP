@@ -96,7 +96,13 @@ public class ChatClient {
                 .collect(Collectors.toList());
 
         //Retrieve images from server.
-        for (String imgLoc : imageLocations) {
+        for (String oldImgLoc : imageLocations) {
+          String imgLoc;
+          if (!oldImgLoc.trim().equals("/")) {
+            imgLoc = ipAddress.getHostName() + "/" + oldImgLoc;
+          } else {
+            imgLoc = oldImgLoc;
+          }
           String commandString = createRequest(HTTPCommand.GET, imgLoc);
 
           if (HTTPVersion.equals(HTTP_1_1)) {
@@ -114,7 +120,7 @@ public class ChatClient {
           } else {
             // Process the image contents
             BufferedImage image = ImageIO.read(new ByteArrayInputStream(response.getContent()));
-            FileProcessor.writeImageToFile(image, response.getResponseHeader().getContentType().getImageType(), responseDirPath + imgLoc);
+            FileProcessor.writeImageToFile(image, response.getResponseHeader().getContentType().getImageType(), responseDirPath + oldImgLoc);
           }
         }
       }
