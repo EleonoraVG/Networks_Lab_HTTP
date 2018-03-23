@@ -170,6 +170,7 @@ public class ChatClient {
    * @throws IOException
    */
   private ServerResponse writeCommandToServer(DataInputStream inFromServer, DataOutputStream outToServer, String commandString) throws IOException {
+    boolean isHeadCommand = commandString.trim().startsWith(HTTPCommand.HEAD.toString());
 
     // Send request to the server
     outToServer.writeBytes(commandString);
@@ -190,17 +191,19 @@ public class ChatClient {
     byte[] response;
     if (responseHeader.getTransferEncoding() != null && responseHeader.getTransferEncoding().equals("chunked")) {
 
-      // Process chunks until and empty chunk arrives
-      response = HTTPReader.readChunkFromServer(inFromServer, responseHeader.getCharSet());
-      while (response.length != 0) {
-        contentBytesStream.write(response);
-        response = readChunkFromServer(inFromServer, responseHeader.getCharSet());
+      if (!isHeadCommand) {
+        // Process chunks until and empty chunk arrives
+        response = HTTPReader.readChunkFromServer(inFromServer, responseHeader.getCharSet());
+        while (response.length != 0) {
+          contentBytesStream.write(response);
+          response = readChunkFromServer(inFromServer, responseHeader.getCharSet());
+        }
       }
 
     } else if (responseHeader.getContentLength() != null) {
 
       // read from server for given length.
-      if (!commandString.trim().startsWith(HTTPCommand.HEAD.toString())) {
+      if (!isHeadCommand) {
         response = processWithContentLength(inFromServer, responseHeader.getContentLength());
         contentBytesStream.write(response);
       }
