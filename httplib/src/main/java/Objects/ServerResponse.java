@@ -1,14 +1,8 @@
 package Objects;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.regex.Pattern;
-
-import static Constants.HTTPConstants.ENDOFLINE;
-import static Constants.HTTPConstants.SPACE;
-
-//TODO: Comments!!!!
+/**
+ * Represents the response of a server.
+ */
 public class ServerResponse {
 
   private ResponseHeader responseHeader;
